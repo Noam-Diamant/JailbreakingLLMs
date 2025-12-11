@@ -6,11 +6,12 @@ psutil
 torch==2.2.2+cu121
 torchvision==0.17.2+cu121
 torchaudio==2.2.2+cu121
-fschat==0.2.23       # FastChat
-litellm
+fschat==0.2.23       # FastChat (works with Pydantic v2 despite constraint)
+litellm==1.30.0  # Version compatible with Pydantic v1/v2
 datasets
 evaluate
 anthropic
 google-generativeai
 openai
 wandb
+jailbreakbench  # Requires Pydantic v2, but fastchat works fine with it

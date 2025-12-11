@@ -2,6 +2,13 @@ from common import get_api_key, conv_template, extract_json
 from language_models import APILiteLLM
 from config import FASTCHAT_TEMPLATE_NAMES, Model
 
+# Models supported by JailbreakBench
+JAILBREAKBENCH_SUPPORTED_MODELS = [
+    "vicuna-13b-v1.5",
+    "llama-2-7b-chat-hf", 
+    "gpt-3.5-turbo-1106",
+    "gpt-4-0125-preview"
+]
 
 def load_attack_and_target_models(args):
     # create attack model and target model
@@ -16,7 +23,8 @@ def load_attack_and_target_models(args):
                         category = args.category,
                         max_n_tokens = args.target_max_n_tokens,
                         evaluate_locally = args.evaluate_locally,
-                        phase = args.jailbreakbench_phase
+                        phase = args.jailbreakbench_phase,
+                        use_jailbreakbench = args.use_jailbreakbench
                         )
     
     return attackLM, targetLM
@@ -168,6 +176,12 @@ class TargetLM():
         self.model_name = model_name
         self.max_n_tokens = max_n_tokens
         self.phase = phase
+        
+        # Automatically disable JailbreakBench for unsupported models
+        if use_jailbreakbench and model_name not in JAILBREAKBENCH_SUPPORTED_MODELS:
+            print(f"Warning: {model_name} is not supported by JailbreakBench. Using direct LiteLLM interface instead.")
+            use_jailbreakbench = False
+        
         self.use_jailbreakbench = use_jailbreakbench
         self.evaluate_locally = evaluate_locally
 
@@ -175,7 +189,12 @@ class TargetLM():
         self.temperature = TARGET_TEMP
         self.top_p = TARGET_TOP_P
 
-        self.model = load_indiv_model(model_name, evaluate_locally, use_jailbreakbench)            
+        self.model = load_indiv_model(model_name, evaluate_locally, use_jailbreakbench)
+        
+        # For non-JailbreakBench models, we need the template
+        if not self.use_jailbreakbench:
+            self.template = FASTCHAT_TEMPLATE_NAMES[Model(model_name)]
+            
         self.category = category
 
     def get_response(self, prompts_list):
