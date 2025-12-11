@@ -1,5 +1,5 @@
 from common import get_api_key, conv_template, extract_json
-from language_models import APILiteLLM
+from language_models import APILiteLLM, LocalTransformers
 from config import FASTCHAT_TEMPLATE_NAMES, Model
 
 # Models supported by JailbreakBench
@@ -16,7 +16,9 @@ def load_attack_and_target_models(args):
                         max_n_tokens = args.attack_max_n_tokens, 
                         max_n_attack_attempts = args.max_n_attack_attempts, 
                         category = args.category,
-                        evaluate_locally = args.evaluate_locally
+                        evaluate_locally = args.evaluate_locally,
+                        model_path = getattr(args, 'attack_model_path', None),
+                        peft_adapter_path = getattr(args, 'attack_peft_adapter', None)
                         )
     
     targetLM = TargetLM(model_name = args.target_model,
@@ -24,12 +26,25 @@ def load_attack_and_target_models(args):
                         max_n_tokens = args.target_max_n_tokens,
                         evaluate_locally = args.evaluate_locally,
                         phase = args.jailbreakbench_phase,
-                        use_jailbreakbench = args.use_jailbreakbench
+                        use_jailbreakbench = args.use_jailbreakbench,
+                        model_path = getattr(args, 'target_model_path', None),
+                        peft_adapter_path = getattr(args, 'target_peft_adapter', None)
                         )
     
     return attackLM, targetLM
 
-def load_indiv_model(model_name, local = False, use_jailbreakbench=True):
+def load_indiv_model(model_name, local = False, use_jailbreakbench=True, 
+                     model_path=None, peft_adapter_path=None):
+    """
+    Load a model either via API or locally.
+    
+    Args:
+        model_name: Model identifier
+        local: Whether to load locally
+        use_jailbreakbench: Whether to use JailbreakBench wrapper
+        model_path: Optional custom path to model (for local loading)
+        peft_adapter_path: Optional path to PEFT adapter (LoRA, etc.)
+    """
     if use_jailbreakbench: 
         if local:
             from jailbreakbench import LLMvLLM
@@ -40,7 +55,12 @@ def load_indiv_model(model_name, local = False, use_jailbreakbench=True):
             lm = LLMLiteLLM(model_name= model_name, api_key = api_key)
     else:
         if local:
-            raise NotImplementedError
+            # Use local transformers with optional PEFT adapter
+            lm = LocalTransformers(
+                model_name=model_name,
+                model_path=model_path,
+                peft_adapter_path=peft_adapter_path
+            )
         else:
             lm = APILiteLLM(model_name)
     return lm
@@ -56,7 +76,9 @@ class AttackLM():
                 max_n_tokens: int, 
                 max_n_attack_attempts: int, 
                 category: str,
-                evaluate_locally: bool):
+                evaluate_locally: bool,
+                model_path: str = None,
+                peft_adapter_path: str = None):
         
         self.model_name = Model(model_name)
         self.max_n_tokens = max_n_tokens
@@ -70,7 +92,9 @@ class AttackLM():
         self.evaluate_locally = evaluate_locally
         self.model = load_indiv_model(model_name, 
                                       local = evaluate_locally, 
-                                      use_jailbreakbench=False # Cannot use JBB as attacker
+                                      use_jailbreakbench=False,  # Cannot use JBB as attacker
+                                      model_path=model_path,
+                                      peft_adapter_path=peft_adapter_path
                                       )
         self.initialize_output = self.model.use_open_source_model
         self.template = FASTCHAT_TEMPLATE_NAMES[self.model_name]
@@ -162,7 +186,8 @@ class AttackLM():
 
 class TargetLM():
     """
-        JailbreakBench class for target language models.
+        Target language model for jailbreaking evaluation.
+        Supports API-based, local, and PEFT fine-tuned models.
     """
     def __init__(self, 
             model_name: str, 
@@ -171,7 +196,8 @@ class TargetLM():
             phase: str,
             evaluate_locally: bool = False,
             use_jailbreakbench: bool = True,
-            ):
+            model_path: str = None,
+            peft_adapter_path: str = None):
         
         self.model_name = model_name
         self.max_n_tokens = max_n_tokens
@@ -179,7 +205,7 @@ class TargetLM():
         
         # Automatically disable JailbreakBench for unsupported models
         if use_jailbreakbench and model_name not in JAILBREAKBENCH_SUPPORTED_MODELS:
-            print(f"Warning: {model_name} is not supported by JailbreakBench. Using direct LiteLLM interface instead.")
+            print(f"Warning: {model_name} is not supported by JailbreakBench. Using direct interface instead.")
             use_jailbreakbench = False
         
         self.use_jailbreakbench = use_jailbreakbench
@@ -189,7 +215,9 @@ class TargetLM():
         self.temperature = TARGET_TEMP
         self.top_p = TARGET_TOP_P
 
-        self.model = load_indiv_model(model_name, evaluate_locally, use_jailbreakbench)
+        self.model = load_indiv_model(model_name, evaluate_locally, use_jailbreakbench,
+                                      model_path=model_path,
+                                      peft_adapter_path=peft_adapter_path)            
         
         # For non-JailbreakBench models, we need the template
         if not self.use_jailbreakbench:

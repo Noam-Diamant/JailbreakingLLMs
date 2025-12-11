@@ -4,6 +4,8 @@ FROM pytorch/pytorch:latest
 # Set a working directory inside the container
 WORKDIR /project
 
+COPY .. /project
+
 # Install git
 RUN apt-get update && apt-get install -y git
 

@@ -183,7 +183,33 @@ if __name__ == '__main__':
     parser.add_argument(
         "--evaluate-locally",
         action = 'store_true',
-        help = "Evaluate models locally rather than through Together.ai. We do not recommend this option as it may be computationally expensive and slow."
+        help = "Evaluate models locally using HuggingFace transformers rather than through Together.ai API."
+    )
+    
+    ########### Local model parameters ##########
+    parser.add_argument(
+        "--attack-model-path",
+        type = str,
+        default = None,
+        help = "Path to local attack model checkpoint or HuggingFace model name. If not specified, uses default path from config."
+    )
+    parser.add_argument(
+        "--target-model-path",
+        type = str,
+        default = None,
+        help = "Path to local target model checkpoint or HuggingFace model name. If not specified, uses default path from config."
+    )
+    parser.add_argument(
+        "--attack-peft-adapter",
+        type = str,
+        default = None,
+        help = "Path to PEFT adapter (LoRA, etc.) for attack model. Only used with --evaluate-locally."
+    )
+    parser.add_argument(
+        "--target-peft-adapter",
+        type = str,
+        default = None,
+        help = "Path to PEFT adapter (LoRA, etc.) for target model. Only used with --evaluate-locally."
     )
     ##################################################
 

@@ -1,6 +1,8 @@
 import os 
 import litellm
-from config import TOGETHER_MODEL_NAMES, LITELLM_TEMPLATES, API_KEY_NAMES, Model
+import torch
+from typing import Optional
+from config import TOGETHER_MODEL_NAMES, LITELLM_TEMPLATES, API_KEY_NAMES, Model, HF_MODEL_NAMES
 from loggers import logger
 from common import get_api_key
 
@@ -88,6 +90,184 @@ class APILiteLLM(LanguageModel):
         responses = [output["choices"][0]["message"].content for output in outputs]
 
         return responses
+
+
+class LocalTransformers(LanguageModel):
+    """Local model using HuggingFace transformers with optional PEFT adapter support."""
+    
+    def __init__(self, model_name: str, model_path: Optional[str] = None, 
+                 peft_adapter_path: Optional[str] = None, device: str = "cuda"):
+        """
+        Initialize local model with transformers.
+        
+        Args:
+            model_name: Model identifier from config.Model enum
+            model_path: Path to local model or HF model name. If None, uses path from config.
+            peft_adapter_path: Optional path to PEFT adapter (LoRA, etc.)
+            device: Device to load model on
+        """
+        super().__init__(model_name)
+        from transformers import AutoTokenizer, AutoModelForCausalLM
+        
+        # Determine model path
+        if model_path is None:
+            # Try to get from HF_MODEL_NAMES
+            if self.model_name in HF_MODEL_NAMES:
+                model_path = HF_MODEL_NAMES[self.model_name]
+            else:
+                raise ValueError(f"No model path specified and no default path for {model_name}")
+        
+        logger.info(f"Loading local model from {model_path}")
+        
+        # Load tokenizer and model
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+            device_map="auto" if device == "cuda" else None,
+            trust_remote_code=True
+        )
+        
+        # Load PEFT adapter if specified
+        if peft_adapter_path:
+            logger.info(f"Loading PEFT adapter from {peft_adapter_path}")
+            try:
+                from peft import PeftModel
+                self.model = PeftModel.from_pretrained(self.model, peft_adapter_path)
+                logger.info("PEFT adapter loaded successfully")
+            except ImportError:
+                raise ImportError("PEFT library not installed. Install with: pip install peft")
+        
+        self.device = device
+        if device != "cuda" and hasattr(self.model, 'to'):
+            self.model = self.model.to(device)
+        
+        # Set pad token if not set
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            
+        # Get template info
+        if self.model_name in LITELLM_TEMPLATES:
+            self.eos_tokens = LITELLM_TEMPLATES[self.model_name]["eos_tokens"]
+            self.post_message = LITELLM_TEMPLATES[self.model_name]["post_message"]
+        else:
+            self.eos_tokens = []
+            self.post_message = ""
+            
+        self.use_open_source_model = True
+    
+    def _format_messages_to_prompt(self, messages: list[dict]) -> str:
+        """Convert OpenAI-style messages to a prompt string using the model's chat template."""
+        # Try to use the model's built-in chat template
+        if hasattr(self.tokenizer, 'apply_chat_template') and self.tokenizer.chat_template:
+            try:
+                return self.tokenizer.apply_chat_template(
+                    messages, 
+                    tokenize=False, 
+                    add_generation_prompt=True
+                )
+            except Exception as e:
+                logger.warning(f"Failed to apply chat template: {e}. Falling back to manual formatting.")
+        
+        # Fallback: manual formatting using LITELLM_TEMPLATES
+        if self.model_name not in LITELLM_TEMPLATES:
+            # Simple fallback
+            prompt = ""
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
+                if role == "system":
+                    prompt += f"System: {content}\n"
+                elif role == "user":
+                    prompt += f"User: {content}\n"
+                elif role == "assistant":
+                    prompt += f"Assistant: {content}\n"
+            prompt += "Assistant:"
+            return prompt
+        
+        # Use LITELLM template
+        template = LITELLM_TEMPLATES[self.model_name]
+        prompt = template.get("initial_prompt_value", "")
+        
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+            
+            if content:  # Only process non-empty messages
+                role_template = template["roles"].get(role, template["roles"]["user"])
+                prompt += role_template["pre_message"] + content + role_template["post_message"]
+        
+        return prompt
+    
+    def batched_generate(self, convs_list: list[list[dict]], 
+                         max_n_tokens: int, 
+                         temperature: float, 
+                         top_p: float,
+                         extra_eos_tokens: list[str] = None) -> list[str]:
+        """
+        Generate responses for a batch of conversations.
+        
+        Args:
+            convs_list: List of conversation histories in OpenAI message format
+            max_n_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            top_p: Nucleus sampling parameter
+            extra_eos_tokens: Additional tokens to stop generation
+            
+        Returns:
+            List of generated responses
+        """
+        # Convert conversations to prompts
+        prompts = [self._format_messages_to_prompt(conv) for conv in convs_list]
+        
+        # Tokenize
+        inputs = self.tokenizer(
+            prompts, 
+            return_tensors="pt", 
+            padding=True, 
+            truncation=True,
+            max_length=2048  # Adjust based on model context length
+        )
+        
+        if self.device == "cuda":
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        
+        # Prepare stop tokens
+        stop_strings = self.eos_tokens.copy()
+        if extra_eos_tokens:
+            stop_strings.extend(extra_eos_tokens)
+        
+        # Generate
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=max_n_tokens,
+                temperature=temperature if temperature > 0 else 1.0,
+                top_p=top_p,
+                do_sample=temperature > 0,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+            )
+        
+        # Decode outputs
+        generated_texts = []
+        for i, output in enumerate(outputs):
+            # Remove the input prompt tokens
+            input_length = inputs['input_ids'][i].shape[0]
+            generated_ids = output[input_length:]
+            
+            # Decode
+            text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+            
+            # Remove stop strings
+            for stop_str in stop_strings:
+                if stop_str in text:
+                    text = text[:text.index(stop_str)]
+            
+            generated_texts.append(text.strip())
+        
+        return generated_texts
+
 
 # class LocalvLLM(LanguageModel):
     
