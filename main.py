@@ -183,7 +183,12 @@ if __name__ == '__main__':
     parser.add_argument(
         "--evaluate-locally",
         action = 'store_true',
-        help = "Evaluate models locally using HuggingFace transformers rather than through Together.ai API."
+        help = "Evaluate models locally using HuggingFace transformers or vLLM rather than through Together.ai API."
+    )
+    parser.add_argument(
+        "--use-vllm",
+        action = 'store_true',
+        help = "Use vLLM backend for local inference (much faster than transformers). Requires --evaluate-locally."
     )
     
     ########### Local model parameters ##########

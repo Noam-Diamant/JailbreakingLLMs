@@ -18,3 +18,4 @@ jailbreakbench  # Requires Pydantic v2, but fastchat works fine with it
 transformers>=4.35.0  # For local model loading
 accelerate  # For model parallelism and memory optimization
 peft  # For PEFT adapters (LoRA, etc.)
+vllm>=0.6.0  # Fast inference with LoRA support (optional, for --use-vllm)

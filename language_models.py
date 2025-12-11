@@ -269,51 +269,182 @@ class LocalTransformers(LanguageModel):
         return generated_texts
 
 
-# class LocalvLLM(LanguageModel):
+class LocalvLLM(LanguageModel):
+    """Local model using vLLM with optional LoRA adapter support."""
     
-#     def __init__(self, model_name: str):
-#         """Initializes the LLMHuggingFace with the specified model name."""
-#         super().__init__(model_name)
-#         if self.model_name not in MODEL_NAMES:
-#             raise ValueError(f"Invalid model name: {model_name}")
-#         self.hf_model_name = HF_MODEL_NAMES[Model(model_name)]
-#         destroy_model_parallel()
-#         self.model = vllm.LLM(model=self.hf_model_name)
-#         if self.temperature > 0:
-#             self.sampling_params = vllm.SamplingParams(
-#                 temperature=self.temperature, top_p=self.top_p, max_tokens=self.max_n_tokens
-#             )
-#         else:
-#             self.sampling_params = vllm.SamplingParams(temperature=0, max_tokens=self.max_n_tokens)
-
-#     def _get_responses(self, prompts_list: list[str], max_new_tokens: int | None = None) -> list[str]:
-#         """Generates responses from the model for the given prompts."""
-#         full_prompt_list = self._prompt_to_conv(prompts_list)
-#         outputs = self.model.generate(full_prompt_list, self.sampling_params)
-#         # Get output from each input, but remove initial space
-#         outputs_list = [output.outputs[0].text[1:] for output in outputs]
-#         return outputs_list
-
-#     def _prompt_to_conv(self, prompts_list):
-#         batchsize = len(prompts_list)
-#         convs_list = [self._init_conv_template() for _ in range(batchsize)]
-#         full_prompts = []
-#         for conv, prompt in zip(convs_list, prompts_list):
-#             conv.append_message(conv.roles[0], prompt)
-#             conv.append_message(conv.roles[1], None)
-#             full_prompt = conv.get_prompt()
-#             # Need this to avoid extraneous space in generation
-#             if "llama-2-7b-chat-hf" in self.model_name:
-#                 full_prompt += " "
-#             full_prompts.append(full_prompt)
-#         return full_prompts
-
-#     def _init_conv_template(self):
-#         template = get_conversation_template(self.hf_model_name)
-#         if "llama" in self.hf_model_name:
-#             # Add the system prompt for Llama as FastChat does not include it
-#             template.system_message = """You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.\n\nIf a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
-#         return template
+    def __init__(self, model_name: str, model_path: Optional[str] = None,
+                 peft_adapter_path: Optional[str] = None, 
+                 gpu_memory_utilization: float = 0.9,
+                 max_model_len: Optional[int] = None):
+        """
+        Initialize vLLM model with optional LoRA adapter.
+        
+        Args:
+            model_name: Model identifier from config.Model enum
+            model_path: Path to local model or HF model name. If None, uses path from config.
+            peft_adapter_path: Optional path to LoRA adapter
+            gpu_memory_utilization: GPU memory fraction to use (default 0.9)
+            max_model_len: Maximum sequence length (default: model's default)
+        """
+        super().__init__(model_name)
+        
+        try:
+            import vllm
+        except ImportError:
+            raise ImportError("vLLM not installed. Install with: pip install vllm")
+        
+        # Determine model path
+        if model_path is None:
+            if self.model_name in HF_MODEL_NAMES:
+                model_path = HF_MODEL_NAMES[self.model_name]
+            else:
+                raise ValueError(f"No model path specified and no default path for {model_name}")
+        
+        logger.info(f"Loading vLLM model from {model_path}")
+        
+        # Configure vLLM
+        vllm_kwargs = {
+            "model": model_path,
+            "gpu_memory_utilization": gpu_memory_utilization,
+            "trust_remote_code": True,
+        }
+        
+        if max_model_len:
+            vllm_kwargs["max_model_len"] = max_model_len
+        
+        # Add LoRA adapter if specified
+        if peft_adapter_path:
+            logger.info(f"Loading LoRA adapter from {peft_adapter_path}")
+            vllm_kwargs["enable_lora"] = True
+            vllm_kwargs["max_lora_rank"] = 64  # Adjust based on your adapter
+        
+        # Initialize vLLM
+        self.model = vllm.LLM(**vllm_kwargs)
+        self.peft_adapter_path = peft_adapter_path
+        
+        # Get template info
+        if self.model_name in LITELLM_TEMPLATES:
+            self.eos_tokens = LITELLM_TEMPLATES[self.model_name]["eos_tokens"]
+            self.post_message = LITELLM_TEMPLATES[self.model_name]["post_message"]
+        else:
+            self.eos_tokens = []
+            self.post_message = ""
+        
+        self.use_open_source_model = True
+        
+        # Get tokenizer for chat template formatting
+        try:
+            from transformers import AutoTokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        except Exception as e:
+            logger.warning(f"Could not load tokenizer: {e}. Will use manual formatting.")
+            self.tokenizer = None
+    
+    def _format_messages_to_prompt(self, messages: list[dict]) -> str:
+        """Convert OpenAI-style messages to a prompt string using the model's chat template."""
+        # Try to use the tokenizer's built-in chat template
+        if self.tokenizer and hasattr(self.tokenizer, 'apply_chat_template') and self.tokenizer.chat_template:
+            try:
+                return self.tokenizer.apply_chat_template(
+                    messages, 
+                    tokenize=False, 
+                    add_generation_prompt=True
+                )
+            except Exception as e:
+                logger.warning(f"Failed to apply chat template: {e}. Falling back to manual formatting.")
+        
+        # Fallback: manual formatting using LITELLM_TEMPLATES
+        if self.model_name not in LITELLM_TEMPLATES:
+            # Simple fallback
+            prompt = ""
+            for msg in messages:
+                role = msg["role"]
+                content = msg["content"]
+                if role == "system":
+                    prompt += f"System: {content}\n"
+                elif role == "user":
+                    prompt += f"User: {content}\n"
+                elif role == "assistant":
+                    prompt += f"Assistant: {content}\n"
+            prompt += "Assistant:"
+            return prompt
+        
+        # Use LITELLM template
+        template = LITELLM_TEMPLATES[self.model_name]
+        prompt = template.get("initial_prompt_value", "")
+        
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+            
+            if content:  # Only process non-empty messages
+                role_template = template["roles"].get(role, template["roles"]["user"])
+                prompt += role_template["pre_message"] + content + role_template["post_message"]
+        
+        return prompt
+    
+    def batched_generate(self, convs_list: list[list[dict]], 
+                         max_n_tokens: int, 
+                         temperature: float, 
+                         top_p: float,
+                         extra_eos_tokens: list[str] = None) -> list[str]:
+        """
+        Generate responses for a batch of conversations using vLLM.
+        
+        Args:
+            convs_list: List of conversation histories in OpenAI message format
+            max_n_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            top_p: Nucleus sampling parameter
+            extra_eos_tokens: Additional tokens to stop generation
+            
+        Returns:
+            List of generated responses
+        """
+        import vllm
+        
+        # Convert conversations to prompts
+        prompts = [self._format_messages_to_prompt(conv) for conv in convs_list]
+        
+        # Prepare stop tokens
+        stop_tokens = self.eos_tokens.copy() if self.eos_tokens else []
+        if extra_eos_tokens:
+            stop_tokens.extend(extra_eos_tokens)
+        
+        # Configure sampling parameters
+        sampling_params = vllm.SamplingParams(
+            temperature=temperature if temperature > 0 else 0.0,
+            top_p=top_p,
+            max_tokens=max_n_tokens,
+            stop=stop_tokens if stop_tokens else None,
+        )
+        
+        # Generate with LoRA if specified
+        if self.peft_adapter_path:
+            # Create LoRA request for each prompt
+            lora_requests = [
+                vllm.lora.request.LoRARequest(
+                    lora_name="adapter",
+                    lora_int_id=1,
+                    lora_local_path=self.peft_adapter_path
+                )
+                for _ in prompts
+            ]
+            outputs = self.model.generate(prompts, sampling_params, lora_request=lora_requests[0])
+        else:
+            outputs = self.model.generate(prompts, sampling_params)
+        
+        # Extract generated text
+        generated_texts = []
+        for output in outputs:
+            text = output.outputs[0].text
+            # Clean up any remaining stop tokens
+            for stop_token in stop_tokens:
+                if stop_token in text:
+                    text = text[:text.index(stop_token)]
+            generated_texts.append(text.strip())
+        
+        return generated_texts
     
 
 
