@@ -18,6 +18,8 @@ def load_judge(args):
         return JBBJudge(os.environ["TOGETHER_API_KEY"])
     elif args.judge_model == "gcg":
         return GCGJudge()
+    elif args.judge_model == "qwen2-57b-a14b-instruct-gptq-int4":
+        return GPTJudge(args)
     else:
         raise NotImplementedError
 
