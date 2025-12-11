@@ -216,6 +216,18 @@ if __name__ == '__main__':
         default = None,
         help = "Path to PEFT adapter (LoRA, etc.) for target model. Only used with --evaluate-locally."
     )
+    parser.add_argument(
+        "--attack-gpu-memory-utilization",
+        type = float,
+        default = 0.45,
+        help = "GPU memory utilization for attack model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
+    )
+    parser.add_argument(
+        "--target-gpu-memory-utilization",
+        type = float,
+        default = 0.45,
+        help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
+    )
     ##################################################
 
     ########### Logging parameters ##########
