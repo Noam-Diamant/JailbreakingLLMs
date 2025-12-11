@@ -83,7 +83,7 @@ if __name__ == '__main__':
         default = "vicuna-13b-v1.5",
         help = "Name of attacking model.",
         choices=["vicuna-13b-v1.5", "llama-2-7b-chat-hf", "gpt-3.5-turbo-1106", "gpt-4-0125-preview", "claude-instant-1.2", "claude-2.1", "gemini-pro", 
-        "mixtral","vicuna-7b-v1.5"]
+        "mixtral","vicuna-7b-v1.5", "gemma-2-2b", "qwen2-57b-a14b-instruct-gptq-int4"]
     )
     parser.add_argument(
         "--attack-max-n-tokens",
