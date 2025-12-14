@@ -21,9 +21,13 @@ def load_judge(args):
     elif args.judge_model == "qwen2-57b-a14b-instruct-gptq-int4":
         # Support local execution for Qwen judge
         evaluate_locally = getattr(args, 'evaluate_judge_locally', False)
+        logger.info(f"Judge loading: evaluate_judge_locally = {evaluate_locally}")
+        logger.info(f"Args attributes: {vars(args)}")
         if evaluate_locally:
+            logger.info("Loading LocalJudge for local execution")
             return LocalJudge(args)
         else:
+            logger.info("Loading GPTJudge for API execution")
             return GPTJudge(args)
     else:
         raise NotImplementedError
