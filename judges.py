@@ -10,7 +10,9 @@ from jailbreakbench import Classifier
 import os
 
 def load_judge(args):
-    if "gpt" in args.judge_model:
+    # Use startswith to match GPT models (gpt-3.5-turbo, gpt-4, etc.)
+    # Previously used "gpt" in args.judge_model which incorrectly matched "gptq" in model names
+    if args.judge_model.startswith("gpt-"):
         return GPTJudge(args)
     elif args.judge_model == "no-judge":
         return NoJudge(args)
@@ -21,13 +23,9 @@ def load_judge(args):
     elif args.judge_model == "qwen2-57b-a14b-instruct-gptq-int4":
         # Support local execution for Qwen judge
         evaluate_locally = getattr(args, 'evaluate_judge_locally', False)
-        logger.info(f"Judge loading: evaluate_judge_locally = {evaluate_locally}")
-        logger.info(f"Args attributes: {vars(args)}")
         if evaluate_locally:
-            logger.info("Loading LocalJudge for local execution")
             return LocalJudge(args)
         else:
-            logger.info("Loading GPTJudge for API execution")
             return GPTJudge(args)
     else:
         raise NotImplementedError

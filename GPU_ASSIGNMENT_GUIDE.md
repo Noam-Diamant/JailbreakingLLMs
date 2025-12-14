@@ -339,3 +339,4 @@ All previous commands still work with the same default behavior!
 ✅ **Backward compatible** with existing commands
 
 For more examples, see `LOCAL_MODELS_GUIDE.md`.
+
