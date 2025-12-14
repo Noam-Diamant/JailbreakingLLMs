@@ -228,6 +228,52 @@ if __name__ == '__main__':
         default = 0.45,
         help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
+    
+    ########### GPU Assignment Parameters ##########
+    parser.add_argument(
+        "--attack-gpu",
+        type = str,
+        default = "0",
+        help = "GPU device(s) for attack model. Can be single GPU '0' or multiple '0,1'. If not specified, uses GPU 0."
+    )
+    parser.add_argument(
+        "--target-gpu",
+        type = str,
+        default = "0",
+        help = "GPU device(s) for target model. Can be single GPU '0' or multiple '0,1'. If not specified, uses GPU 0."
+    )
+    parser.add_argument(
+        "--judge-gpu",
+        type = str,
+        default = "0",
+        help = "GPU device(s) for judge model. Can be single GPU '0' or multiple '0,1'. Only used with --evaluate-judge-locally."
+    )
+    ##################################################
+    
+    ########### Judge Local Execution Parameters ##########
+    parser.add_argument(
+        "--evaluate-judge-locally",
+        action = 'store_true',
+        help = "Evaluate judge model locally using vLLM rather than through API."
+    )
+    parser.add_argument(
+        "--judge-model-path",
+        type = str,
+        default = None,
+        help = "Path to local judge model checkpoint or HuggingFace model name. If not specified, uses default path from config."
+    )
+    parser.add_argument(
+        "--judge-peft-adapter",
+        type = str,
+        default = None,
+        help = "Path to PEFT adapter (LoRA, etc.) for judge model. Only used with --evaluate-judge-locally."
+    )
+    parser.add_argument(
+        "--judge-gpu-memory-utilization",
+        type = float,
+        default = 0.45,
+        help = "GPU memory utilization for judge model (0.0 to 1.0). Default 0.45. Only used with --evaluate-judge-locally."
+    )
     ##################################################
 
     ########### Logging parameters ##########

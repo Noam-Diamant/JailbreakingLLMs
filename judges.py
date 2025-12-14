@@ -3,7 +3,7 @@ from fastchat.model import (
 )
 import re
 from system_prompts import get_judge_system_prompt
-from language_models import APILiteLLM
+from language_models import APILiteLLM, LocalvLLM
 from loggers import logger
 
 from jailbreakbench import Classifier
@@ -19,7 +19,12 @@ def load_judge(args):
     elif args.judge_model == "gcg":
         return GCGJudge()
     elif args.judge_model == "qwen2-57b-a14b-instruct-gptq-int4":
-        return GPTJudge(args)
+        # Support local execution for Qwen judge
+        evaluate_locally = getattr(args, 'evaluate_judge_locally', False)
+        if evaluate_locally:
+            return LocalJudge(args)
+        else:
+            return GPTJudge(args)
     else:
         raise NotImplementedError
 
@@ -154,6 +159,50 @@ class GCGJudge(JudgeBase):
             classifications.append(int_score)
         
         return classifications
+
+
+class LocalJudge(JudgeBase):
+    """Local judge using vLLM for fast inference."""
+    
+    def __init__(self, args):
+        super(LocalJudge, self).__init__(args)
+        
+        # Import here to avoid circular dependency
+        from config import Model, HF_MODEL_NAMES
+        
+        # Get model configuration
+        model_name = Model(self.judge_name)
+        model_path = getattr(args, 'judge_model_path', None)
+        if model_path is None and model_name in HF_MODEL_NAMES:
+            model_path = HF_MODEL_NAMES[model_name]
+        
+        # Initialize vLLM model
+        self.judge_model = LocalvLLM(
+            model_name=self.judge_name,
+            model_path=model_path,
+            peft_adapter_path=getattr(args, 'judge_peft_adapter', None),
+            gpu_memory_utilization=getattr(args, 'judge_gpu_memory_utilization', 0.45),
+            gpu_devices=getattr(args, 'judge_gpu', '0')
+        )
+        
+        logger.info(f"Loaded local judge model: {self.judge_name}")
+    
+    def create_conv(self, full_prompt):
+        """Create conversation in OpenAI API format for vLLM."""
+        return [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": full_prompt}
+        ]
+    
+    def score(self, attack_prompt_list, target_response_list):
+        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response)) 
+                      for prompt, response in zip(attack_prompt_list, target_response_list)]
+        raw_outputs = self.judge_model.batched_generate(convs_list, 
+                                                        max_n_tokens=self.max_n_tokens,
+                                                        temperature=self.temperature,
+                                                        top_p=1)
+        outputs = [self.process_output(raw_output) for raw_output in raw_outputs]
+        return outputs
 
 
 class OpenSourceJudge(JudgeBase):

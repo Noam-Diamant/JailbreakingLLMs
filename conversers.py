@@ -22,7 +22,8 @@ def load_attack_and_target_models(args):
                         model_path = getattr(args, 'attack_model_path', None),
                         peft_adapter_path = getattr(args, 'attack_peft_adapter', None),
                         use_vllm = use_vllm,
-                        gpu_memory_utilization = getattr(args, 'attack_gpu_memory_utilization', 0.45)
+                        gpu_memory_utilization = getattr(args, 'attack_gpu_memory_utilization', 0.45),
+                        gpu_devices = getattr(args, 'attack_gpu', '0')
                         )
     
     targetLM = TargetLM(model_name = args.target_model,
@@ -34,14 +35,15 @@ def load_attack_and_target_models(args):
                         model_path = getattr(args, 'target_model_path', None),
                         peft_adapter_path = getattr(args, 'target_peft_adapter', None),
                         use_vllm = use_vllm,
-                        gpu_memory_utilization = getattr(args, 'target_gpu_memory_utilization', 0.45)
+                        gpu_memory_utilization = getattr(args, 'target_gpu_memory_utilization', 0.45),
+                        gpu_devices = getattr(args, 'target_gpu', '0')
                         )
     
     return attackLM, targetLM
 
 def load_indiv_model(model_name, local = False, use_jailbreakbench=True, 
                      model_path=None, peft_adapter_path=None, use_vllm=False, 
-                     gpu_memory_utilization=0.9):
+                     gpu_memory_utilization=0.9, gpu_devices="0"):
     """
     Load a model either via API or locally.
     
@@ -53,6 +55,7 @@ def load_indiv_model(model_name, local = False, use_jailbreakbench=True,
         peft_adapter_path: Optional path to PEFT adapter (LoRA, etc.)
         use_vllm: Whether to use vLLM backend (faster) or HuggingFace Transformers
         gpu_memory_utilization: GPU memory utilization for vLLM (0.0 to 1.0)
+        gpu_devices: GPU device(s) to use (e.g., "0" or "0,1,2,3")
     """
     if use_jailbreakbench: 
         if local:
@@ -71,7 +74,8 @@ def load_indiv_model(model_name, local = False, use_jailbreakbench=True,
                     model_name=model_name,
                     model_path=model_path,
                     peft_adapter_path=peft_adapter_path,
-                    gpu_memory_utilization=gpu_memory_utilization
+                    gpu_memory_utilization=gpu_memory_utilization,
+                    gpu_devices=gpu_devices
                 )
             else:
                 # Use HuggingFace Transformers with optional PEFT adapter
@@ -99,7 +103,8 @@ class AttackLM():
                 model_path: str = None,
                 peft_adapter_path: str = None,
                 use_vllm: bool = False,
-                gpu_memory_utilization: float = 0.9):
+                gpu_memory_utilization: float = 0.9,
+                gpu_devices: str = "0"):
         
         self.model_name = Model(model_name)
         self.max_n_tokens = max_n_tokens
@@ -117,7 +122,8 @@ class AttackLM():
                                       model_path=model_path,
                                       peft_adapter_path=peft_adapter_path,
                                       use_vllm=use_vllm,
-                                      gpu_memory_utilization=gpu_memory_utilization
+                                      gpu_memory_utilization=gpu_memory_utilization,
+                                      gpu_devices=gpu_devices
                                       )
         self.initialize_output = self.model.use_open_source_model
         self.template = FASTCHAT_TEMPLATE_NAMES[self.model_name]
@@ -222,7 +228,8 @@ class TargetLM():
             model_path: str = None,
             peft_adapter_path: str = None,
             use_vllm: bool = False,
-            gpu_memory_utilization: float = 0.9):
+            gpu_memory_utilization: float = 0.9,
+            gpu_devices: str = "0"):
         
         self.model_name = model_name
         self.max_n_tokens = max_n_tokens
@@ -244,7 +251,8 @@ class TargetLM():
                                       model_path=model_path,
                                       peft_adapter_path=peft_adapter_path,
                                       use_vllm=use_vllm,
-                                      gpu_memory_utilization=gpu_memory_utilization)            
+                                      gpu_memory_utilization=gpu_memory_utilization,
+                                      gpu_devices=gpu_devices)            
         
         # For non-JailbreakBench models, we need the template
         if not self.use_jailbreakbench:

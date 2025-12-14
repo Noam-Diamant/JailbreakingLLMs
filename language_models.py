@@ -275,7 +275,8 @@ class LocalvLLM(LanguageModel):
     def __init__(self, model_name: str, model_path: Optional[str] = None,
                  peft_adapter_path: Optional[str] = None, 
                  gpu_memory_utilization: float = 0.9,
-                 max_model_len: Optional[int] = None):
+                 max_model_len: Optional[int] = None,
+                 gpu_devices: str = "0"):
         """
         Initialize vLLM model with optional LoRA adapter.
         
@@ -285,6 +286,7 @@ class LocalvLLM(LanguageModel):
             peft_adapter_path: Optional path to LoRA adapter
             gpu_memory_utilization: GPU memory fraction to use (default 0.9)
             max_model_len: Maximum sequence length (default: model's default)
+            gpu_devices: GPU device(s) to use (e.g., "0" or "0,1,2,3"). Set via CUDA_VISIBLE_DEVICES.
         """
         super().__init__(model_name)
         
@@ -292,6 +294,12 @@ class LocalvLLM(LanguageModel):
             import vllm
         except ImportError:
             raise ImportError("vLLM not installed. Install with: pip install vllm")
+        
+        # Set CUDA_VISIBLE_DEVICES for this model
+        # This limits vLLM to only see the specified GPU(s)
+        original_cuda_devices = os.environ.get('CUDA_VISIBLE_DEVICES', None)
+        os.environ['CUDA_VISIBLE_DEVICES'] = gpu_devices
+        logger.info(f"Setting CUDA_VISIBLE_DEVICES={gpu_devices} for {model_name}")
         
         # Determine model path
         if model_path is None:
@@ -321,6 +329,12 @@ class LocalvLLM(LanguageModel):
         # Initialize vLLM
         self.model = vllm.LLM(**vllm_kwargs)
         self.peft_adapter_path = peft_adapter_path
+        
+        # Restore original CUDA_VISIBLE_DEVICES
+        if original_cuda_devices is not None:
+            os.environ['CUDA_VISIBLE_DEVICES'] = original_cuda_devices
+        elif 'CUDA_VISIBLE_DEVICES' in os.environ:
+            del os.environ['CUDA_VISIBLE_DEVICES']
         
         # Get template info
         if self.model_name in LITELLM_TEMPLATES:
