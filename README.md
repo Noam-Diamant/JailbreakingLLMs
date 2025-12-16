@@ -12,8 +12,29 @@ https://github.com/patrickrchao/JailbreakingLLMs/assets/17835095/d6b68d1a-b16a-4
 There is growing interest in ensuring that large language models (LLMs) align with human values. However, the alignment of such models is vulnerable to adversarial jailbreaks, which coax LLMs into overriding their safety guardrails.  The identification of these vulnerabilities is therefore instrumental in understanding inherent weaknesses and preventing future misuse.  To this end, we propose *Prompt Automatic Iterative Refinement* (PAIR), an algorithm that generates semantic jailbreaks with only black-box access to an LLM. PAIR—which is inspired by social engineering attacks—uses an attacker LLM to automatically generate jailbreaks for a separate targeted LLM without human intervention. In this way, the attacker LLM iteratively queries the target LLM to update and refine a candidate jailbreak. Empirically, PAIR often requires fewer than twenty queries to produce a jailbreak, which is orders of magnitude more efficient than existing algorithms. PAIR also achieves competitive jailbreaking success rates and transferability on open and closed-source LLMs, including GPT-3.5/4, Vicuna, and GeminiPro-2.
 
 ## Getting Started
+
+### Option 1: Automated UV Setup (Recommended)
+We provide an automated setup script that creates a UV virtual environment and installs all dependencies:
+
+```bash
+./setup_uv_venv.sh
+```
+
+This script will:
+- Create a UV virtual environment automatically
+- Install PyTorch with CUDA 12.1 support
+- Handle dependency conflicts (fschat, vllm)
+- Install all required packages
+
+After running the script, activate the environment:
+```bash
+source .venv/bin/activate
+```
+
+### Option 2: Docker Setup
 We provide a Dockerfile in `docker/Dockerfile` that can be used to easily set up the environment needed to run all code in this repository.
 
+### API Keys
 For your desired black box models, make sure you have the API key stored in `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` respectively. For example,
 ```
 export OPENAI_API_KEY=[YOUR_API_KEY_HERE]
