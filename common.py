@@ -35,7 +35,7 @@ def extract_json(s):
             logger.error(f"Extracted:\n {json_str}")
             return None, None
         return parsed, json_str
-    except (SyntaxError, ValueError):
+    except (SyntaxError, ValueError) as e:
         logger.error("Error parsing extracted structure")
         logger.error(f"Extracted:\n {json_str}")
         return None, None

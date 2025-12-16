@@ -167,7 +167,13 @@ class AttackLM():
             new_indices_to_regenerate = []
             for i, full_output in enumerate(outputs_list):
                 orig_index = indices_to_regenerate[i]
-                full_output = init_message + full_output + "}" # Add end brace since we terminate generation on end braces
+                # Check if model generated complete JSON (starts with '{') or just the continuation
+                if full_output.strip().startswith('{'):
+                    # Model generated complete JSON, just add closing brace
+                    full_output = full_output + "}"
+                else:
+                    # Model generated continuation, prepend init_message
+                    full_output = init_message + full_output + "}"
                 attack_dict, json_str = extract_json(full_output)
                 if attack_dict is not None:
                     valid_outputs[orig_index] = attack_dict
