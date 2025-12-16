@@ -57,23 +57,33 @@ echo "🔌 Activating virtual environment..."
 source .venv/bin/activate
 
 echo ""
-echo "📦 Step 1/4: Installing PyTorch with CUDA 12.1 support..."
+echo "📦 Step 1/5: Installing PyTorch with CUDA 12.1 support..."
 uv pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 \
     --index-url https://download.pytorch.org/whl/cu121
 
 echo ""
-echo "📦 Step 2/4: Installing fschat (bypassing dependency conflicts)..."
+echo "📦 Step 2/5: Installing fschat (bypassing dependency conflicts)..."
 uv pip install fschat==0.2.23 --no-deps
 
 echo ""
-echo "📦 Step 3/4: Installing other dependencies..."
+echo "📦 Step 3/5: Installing other dependencies..."
 uv pip install pandas seaborn matplotlib numpy psutil \
     litellm==1.30.0 datasets evaluate anthropic google-generativeai \
     openai wandb jailbreakbench transformers>=4.35.0 accelerate peft
 
 echo ""
-echo "📦 Step 4/4: Installing vllm (separately to avoid building from source)..."
+echo "📦 Step 4/5: Installing vllm (separately to avoid building from source)..."
 uv pip install "vllm>=0.6.0"
+
+echo ""
+echo "📦 Step 5/5: Fixing transformers (vllm may have upgraded dependencies)..."
+uv pip install --force-reinstall transformers
+
+echo ""
+echo "🔍 Verifying installation..."
+python -c "from transformers import AutoConfig; print('✓ Transformers import successful')" || {
+    echo "⚠️  Warning: Transformers verification failed, but installation may still work."
+}
 
 echo ""
 echo "=========================================="
