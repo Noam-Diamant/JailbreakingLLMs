@@ -246,6 +246,11 @@ class TargetLM():
             print(f"Warning: {model_name} is not supported by JailbreakBench. Using direct interface instead.")
             use_jailbreakbench = False
         
+        # Disable JailbreakBench when using vLLM (jailbreakbench's vLLM support is just a dummy stub)
+        if use_jailbreakbench and use_vllm:
+            print(f"Warning: JailbreakBench does not support vLLM backend. Using direct vLLM interface instead.")
+            use_jailbreakbench = False
+        
         self.use_jailbreakbench = use_jailbreakbench
         self.evaluate_locally = evaluate_locally
 
