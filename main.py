@@ -111,7 +111,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target-max-n-tokens",
         type = int,
-        default = 150,
+        default = 512,
         help = "Maximum number of generated tokens for the target."
     )
     parser.add_argument(
