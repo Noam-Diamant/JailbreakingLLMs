@@ -20,8 +20,10 @@ def main(args):
 
 
     # Initialize models and judge
+    # Note: If attack and judge models are the same and running locally,
+    # the same model instance will be reused to save GPU memory
     attackLM, targetLM = load_attack_and_target_models(args)
-    judgeLM = load_judge(args)
+    judgeLM = load_judge(args, attackLM)
     
     # Initialize conversations
     convs_list, processed_response_list, system_prompts = initialize_conversations(args.n_streams, args.goal, args.target_str, attackLM.template)
@@ -219,13 +221,13 @@ if __name__ == '__main__':
     parser.add_argument(
         "--attack-gpu-memory-utilization",
         type = float,
-        default = 0.45,
+        default = 0.85,
         help = "GPU memory utilization for attack model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     parser.add_argument(
         "--target-gpu-memory-utilization",
         type = float,
-        default = 0.45,
+        default = 0.85,
         help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     
@@ -271,7 +273,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--judge-gpu-memory-utilization",
         type = float,
-        default = 0.45,
+        default = 0.85,
         help = "GPU memory utilization for judge model (0.0 to 1.0). Default 0.45. Only used with --evaluate-judge-locally."
     )
     ##################################################

@@ -9,7 +9,23 @@ from loggers import logger
 from jailbreakbench import Classifier
 import os
 
-def load_judge(args):
+def load_judge(args, attackLM=None):
+    """
+    Load judge model, reusing attack model if they are the same.
+    
+    Args:
+        args: Command line arguments
+        attackLM: Attack model instance (optional). If provided and matches judge model,
+                  the same model instance will be reused.
+    """
+    # Check if attack and judge models are the same and attack is local
+    # Automatically reuse the attack model if they match
+    if (attackLM is not None and 
+        args.judge_model == args.attack_model and 
+        args.evaluate_locally):
+        logger.info(f"Reusing attack model '{args.attack_model}' for judge (same model, same GPU: {args.attack_gpu})")
+        return SharedModelJudge(args, attackLM)
+    
     # Use startswith to match GPT models (gpt-3.5-turbo, gpt-4, etc.)
     # Previously used "gpt" in args.judge_model which incorrectly matched "gptq" in model names
     if args.judge_model.startswith("gpt-"):
@@ -191,6 +207,37 @@ class LocalJudge(JudgeBase):
     
     def create_conv(self, full_prompt):
         """Create conversation in OpenAI API format for vLLM."""
+        return [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": full_prompt}
+        ]
+    
+    def score(self, attack_prompt_list, target_response_list):
+        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response)) 
+                      for prompt, response in zip(attack_prompt_list, target_response_list)]
+        raw_outputs = self.judge_model.batched_generate(convs_list, 
+                                                        max_n_tokens=self.max_n_tokens,
+                                                        temperature=self.temperature,
+                                                        top_p=1)
+        outputs = [self.process_output(raw_output) for raw_output in raw_outputs]
+        return outputs
+
+
+class SharedModelJudge(JudgeBase):
+    """
+    Judge that reuses an existing model instance (e.g., from attack model).
+    This saves GPU memory by not loading the same model twice.
+    """
+    
+    def __init__(self, args, attackLM):
+        super(SharedModelJudge, self).__init__(args)
+        
+        # Reuse the attack model's underlying model instance
+        self.judge_model = attackLM.model
+        logger.info(f"Reusing attack model '{args.attack_model}' for judge scoring")
+    
+    def create_conv(self, full_prompt):
+        """Create conversation in OpenAI API format."""
         return [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": full_prompt}
