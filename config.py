@@ -2,7 +2,7 @@ from enum import Enum
 VICUNA_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--lmsys--vicuna-13b-v1.5"
 LLAMA_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Llama-2-7b-chat-hf"
 LLAMA_3_8B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Meta-Llama-3-8B"
-LLAMA_3_1_8B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Llama-3.1-8B"
+LLAMA_3_1_8B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Llama-3.1-8B/snapshots/d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
 GEMMA_2_2B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--google--gemma-2-2b"
 QWEN_57B_GPTQ_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--Qwen--Qwen2-57B-A14B-Instruct-GPTQ-Int4"
 
@@ -33,7 +33,7 @@ MODEL_NAMES = [model.value for model in Model]
 HF_MODEL_NAMES: dict[Model, str] = {
     Model.llama_2: "meta-llama/Llama-2-7b-chat-hf",
     Model.llama_3_8b: LLAMA_3_8B_PATH,
-    Model.llama_3_1_8b: LLAMA_3_1_8B_PATH,
+    Model.llama_3_1_8b: "meta-llama/Llama-3.1-8B",
     Model.vicuna: "lmsys/vicuna-13b-v1.5",
     Model.mixtral: "mistralai/Mixtral-8x7B-Instruct-v0.1",
     Model.gemma_2_2b: "google/gemma-2-2b",
