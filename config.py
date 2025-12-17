@@ -30,7 +30,7 @@ MODEL_NAMES = [model.value for model in Model]
 
 HF_MODEL_NAMES: dict[Model, str] = {
     Model.llama_2: "meta-llama/Llama-2-7b-chat-hf",
-    Model.llama_3_8b: "meta-llama/Meta-Llama-3-8B",
+    Model.llama_3_8b: LLAMA_3_8B_PATH,
     Model.vicuna: "lmsys/vicuna-13b-v1.5",
     Model.mixtral: "mistralai/Mixtral-8x7B-Instruct-v0.1",
     Model.gemma_2_2b: "google/gemma-2-2b",
