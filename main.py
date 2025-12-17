@@ -221,13 +221,13 @@ if __name__ == '__main__':
     parser.add_argument(
         "--attack-gpu-memory-utilization",
         type = float,
-        default = 0.85,
+        default = 0.425,
         help = "GPU memory utilization for attack model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     parser.add_argument(
         "--target-gpu-memory-utilization",
         type = float,
-        default = 0.85,
+        default = 0.425,
         help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--judge-gpu-memory-utilization",
         type = float,
-        default = 0.85,
+        default = 0.425,
         help = "GPU memory utilization for judge model (0.0 to 1.0). Default 0.45. Only used with --evaluate-judge-locally."
     )
     ##################################################

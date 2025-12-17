@@ -105,3 +105,4 @@ echo ""
 echo "  3. Run experiments:"
 echo "     python3 main.py --attack-model vicuna --target-model vicuna --judge-model gpt-4 --goal \"...\" --target-str \"...\""
 echo ""
+

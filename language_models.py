@@ -62,21 +62,21 @@ class APILiteLLM(LanguageModel):
         
     
     
-    def batched_generate(self, convs_list: list[list[dict]], 
-                         max_n_tokens: int, 
-                         temperature: float, 
+    def batched_generate(self, convs_list: list[list[dict]],
+                         max_n_tokens: int,
+                         temperature: float,
                          top_p: float,
-                         extra_eos_tokens: list[str] = None) -> list[str]: 
-        
-        eos_tokens = self.eos_tokens 
+                         extra_eos_tokens: list[str] = None) -> list[str]:
+
+        eos_tokens = self.eos_tokens
 
         if extra_eos_tokens:
             eos_tokens.extend(extra_eos_tokens)
         if self.use_open_source_model:
             self._update_prompt_template()
-        
+
         outputs = litellm.batch_completion(
-            model=self.litellm_model_name, 
+            model=self.litellm_model_name,
             messages=convs_list,
             api_key=self.api_key,
             temperature=temperature,
@@ -86,7 +86,7 @@ class APILiteLLM(LanguageModel):
             seed=0,
             stop=eos_tokens,
         )
-        
+
         responses = [output["choices"][0]["message"].content for output in outputs]
 
         return responses
