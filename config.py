@@ -1,6 +1,7 @@
 from enum import Enum
 VICUNA_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--lmsys--vicuna-13b-v1.5"
 LLAMA_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Llama-2-7b-chat-hf"
+LLAMA_3_8B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Meta-Llama-3-8B"
 GEMMA_2_2B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--google--gemma-2-2b"
 QWEN_57B_GPTQ_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--Qwen--Qwen2-57B-A14B-Instruct-GPTQ-Int4"
 
@@ -14,6 +15,7 @@ TARGET_TOP_P = 1
 class Model(Enum):
     vicuna = "vicuna-13b-v1.5"
     llama_2 = "llama-2-7b-chat-hf"
+    llama_3_8b = "meta-llama-3-8b"
     gpt_3_5 = "gpt-3.5-turbo-1106"
     gpt_4 = "gpt-4-0125-preview"
     claude_1 = "claude-instant-1.2"
@@ -28,6 +30,7 @@ MODEL_NAMES = [model.value for model in Model]
 
 HF_MODEL_NAMES: dict[Model, str] = {
     Model.llama_2: "meta-llama/Llama-2-7b-chat-hf",
+    Model.llama_3_8b: "meta-llama/Meta-Llama-3-8B",
     Model.vicuna: "lmsys/vicuna-13b-v1.5",
     Model.mixtral: "mistralai/Mixtral-8x7B-Instruct-v0.1",
     Model.gemma_2_2b: "google/gemma-2-2b",
@@ -50,6 +53,7 @@ FASTCHAT_TEMPLATE_NAMES: dict[Model, str] = {
     Model.gemini: "gemini-pro",
     Model.vicuna: "vicuna_v1.1",
     Model.llama_2: "llama-2-7b-chat-hf",
+    Model.llama_3_8b: "llama-3",
     Model.mixtral: "mixtral",
     Model.gemma_2_2b: "gemma",
     Model.qwen_57b_gptq: "qwen-7b-chat",
@@ -79,7 +83,7 @@ LITELLM_TEMPLATES: dict[Model, dict] = {
                 },
                 "post_message":"</s>",
                 "initial_prompt_value" : "",
-                "eos_tokens": ["</s>"]         
+                "eos_tokens": ["</s>"]
                 },
     Model.llama_2: {"roles":{
                     "system": {"pre_message": "[INST] <<SYS>>\n", "post_message": "\n<</SYS>>\n\n"},
@@ -88,7 +92,16 @@ LITELLM_TEMPLATES: dict[Model, dict] = {
                 },
                 "post_message" : " </s><s>",
                 "initial_prompt_value" : "",
-                "eos_tokens" :  ["</s>", "[/INST]"]  
+                "eos_tokens" :  ["</s>", "[/INST]"]
+            },
+    Model.llama_3_8b: {"roles":{
+                    "system": {"pre_message": "<|start_header_id|>system<|end_header_id|>\n\n", "post_message": "<|eot_id|>"},
+                    "user": {"pre_message": "<|start_header_id|>user<|end_header_id|>\n\n", "post_message": "<|eot_id|>"},
+                    "assistant": {"pre_message": "<|start_header_id|>assistant<|end_header_id|>\n\n", "post_message": "<|eot_id|>"},
+                },
+                "post_message" : "",
+                "initial_prompt_value" : "<|begin_of_text|>",
+                "eos_tokens" :  ["<|eot_id|>"]
             },
     Model.mixtral: {"roles":{
                     "system": {
