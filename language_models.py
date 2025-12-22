@@ -1,4 +1,5 @@
 import os 
+import asyncio
 import litellm
 import torch
 from typing import Optional
@@ -15,6 +16,75 @@ class LanguageModel():
         Generates responses for a batch of prompts using a language model.
         """
         raise NotImplementedError
+
+
+class HTTPChatModel(LanguageModel):
+    """
+    Language model that talks to an existing OpenAI-compatible HTTP server
+    (e.g., vLLM started with `vllm serve ... --api-key EMPTY`).
+
+    This is used when we want `JailbreakingLLMs` to use already-running vLLM
+    servers instead of starting models in-process.
+    """
+
+    def __init__(self, model_name: str, api_base: str, api_key: str = "EMPTY"):
+        super().__init__(model_name)
+        try:
+            from openai import AsyncOpenAI
+        except ImportError as e:
+            raise ImportError(
+                "openai package is required for HTTPChatModel. "
+                "Install with: pip install openai"
+            ) from e
+
+        self.api_base = api_base
+        self.api_key = api_key
+        self.AsyncOpenAI = AsyncOpenAI
+
+        # HTTP-backed models are treated as non-open-source for the purposes of
+        # AttackLM's JSON-seeding logic. We don't prepend any structured JSON
+        # template, and there is no post_message suffix.
+        self.use_open_source_model = False
+        self.post_message = ""
+
+        # vLLM exposes the underlying HF repo id as the model name
+        if self.model_name in HF_MODEL_NAMES:
+            self.served_model_name = HF_MODEL_NAMES[self.model_name]
+        else:
+            # fall back to raw value (e.g., gpt-3.5-turbo-1106)
+            self.served_model_name = self.model_name.value
+
+    async def _aget_single(self, client, messages, max_n_tokens, temperature, top_p):
+        response = await client.chat.completions.create(
+            model=self.served_model_name,
+            messages=messages,
+            max_tokens=max_n_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
+        return response.choices[0].message.content
+
+    async def _aget_batch(self, convs_list, max_n_tokens, temperature, top_p):
+        client = self.AsyncOpenAI(base_url=self.api_base, api_key=self.api_key)
+        tasks = [
+            self._aget_single(client, messages, max_n_tokens, temperature, top_p)
+            for messages in convs_list
+        ]
+        return await asyncio.gather(*tasks)
+
+    def batched_generate(self, convs_list: list[list[dict]],
+                         max_n_tokens: int,
+                         temperature: float,
+                         top_p: float,
+                         extra_eos_tokens: list[str] = None) -> list[str]:
+        """
+        Synchronously generate a batch of responses by internally using
+        an async OpenAI client against the running vLLM HTTP server.
+        """
+        # We ignore extra_eos_tokens here; stopping is handled by the server.
+        return asyncio.run(
+            self._aget_batch(convs_list, max_n_tokens, temperature, top_p)
+        )
     
 class APILiteLLM(LanguageModel):
     API_RETRY_SLEEP = 10

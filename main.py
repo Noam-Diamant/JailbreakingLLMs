@@ -221,13 +221,13 @@ if __name__ == '__main__':
     parser.add_argument(
         "--attack-gpu-memory-utilization",
         type = float,
-        default = 0.425,
+        default = 0.85,
         help = "GPU memory utilization for attack model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     parser.add_argument(
         "--target-gpu-memory-utilization",
         type = float,
-        default = 0.425,
+        default = 0.85,
         help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target-gpu",
         type = str,
-        default = "0",
+        default = "3",
         help = "GPU device(s) for target model. Can be single GPU '0' or multiple '0,1'. If not specified, uses GPU 0."
     )
     parser.add_argument(
@@ -249,6 +249,30 @@ if __name__ == '__main__':
         type = str,
         default = "0",
         help = "GPU device(s) for judge model. Can be single GPU '0' or multiple '0,1'. Only used with --evaluate-judge-locally."
+    )
+    ##################################################
+
+    ########### HTTP vLLM server parameters ##########
+    parser.add_argument(
+        "--attack-api-base",
+        type=str,
+        default=None,
+        help="Base URL for attack model HTTP server (e.g., http://localhost:8002/v1). "
+             "If provided, the attack model will use this OpenAI-compatible endpoint instead of loading locally or via API providers."
+    )
+    parser.add_argument(
+        "--target-api-base",
+        type=str,
+        default=None,
+        help="Base URL for target model HTTP server (e.g., http://localhost:8001/v1). "
+             "If provided, the target model will use this OpenAI-compatible endpoint instead of loading locally or via API providers."
+    )
+    parser.add_argument(
+        "--judge-api-base",
+        type=str,
+        default=None,
+        help="Base URL for judge model HTTP server (e.g., http://localhost:8003/v1). "
+             "If provided, the judge will query this OpenAI-compatible endpoint."
     )
     ##################################################
     
@@ -273,7 +297,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--judge-gpu-memory-utilization",
         type = float,
-        default = 0.425,
+        default = 0.85,
         help = "GPU memory utilization for judge model (0.0 to 1.0). Default 0.45. Only used with --evaluate-judge-locally."
     )
     ##################################################
@@ -302,6 +326,61 @@ if __name__ == '__main__':
     
     
     args = parser.parse_args()
+
+    # ---------------------------------------------------------------------
+    # Automatic HTTP vLLM server wiring (ports 8004, 8005, 8006)
+    # ---------------------------------------------------------------------
+    # When using vLLM locally, we assume that external vLLM HTTP servers
+    # have been started beforehand using start_vllm_servers.sh in this
+    # directory. To avoid adding new CLI arguments, we automatically map
+    # the attack/target/judge models to HTTP endpoints on ports 8004–8006.
+    #
+    # Mapping rule (must match start_vllm_servers.sh):
+    #   - Consider models in order: target, attack, judge.
+    #   - First unique model  -> port 8004
+    #   - Second unique model -> port 8005
+    #   - Third unique model  -> port 8006
+    #   - Repeated models reuse the same port as their first occurrence.
+    #
+    # This ensures that if, e.g., attack and judge use the same model, they
+    # both talk to the same vLLM server instead of starting duplicates.
+    if getattr(args, "use_vllm", False):
+        base_ports = [8004, 8005, 8006]
+        model_to_port = {}
+        # Use a mutable container to allow updates inside the nested function
+        next_port_idx = [0]
+
+        def assign_port_for_model(model_name: str) -> int:
+            if model_name in model_to_port:
+                return model_to_port[model_name]
+            if next_port_idx[0] >= len(base_ports):
+                raise ValueError(
+                    "Requested more than 3 unique models while using vLLM. "
+                    "Only ports 8004, 8005, and 8006 are available."
+                )
+            port = base_ports[next_port_idx[0]]
+            model_to_port[model_name] = port
+            next_port_idx[0] += 1
+            return port
+
+        target_port = assign_port_for_model(args.target_model)
+        attack_port = assign_port_for_model(args.attack_model)
+        judge_port = assign_port_for_model(args.judge_model)
+
+        if getattr(args, "target_api_base", None) is None:
+            args.target_api_base = f"http://localhost:{target_port}/v1"
+        if getattr(args, "attack_api_base", None) is None:
+            args.attack_api_base = f"http://localhost:{attack_port}/v1"
+        if getattr(args, "judge_api_base", None) is None:
+            args.judge_api_base = f"http://localhost:{judge_port}/v1"
+
+        logger.info(
+            f"Using external vLLM HTTP servers (use_vllm=True): "
+            f"target_model={args.target_model} -> {args.target_api_base}, "
+            f"attack_model={args.attack_model} -> {args.attack_api_base}, "
+            f"judge_model={args.judge_model} -> {args.judge_api_base}"
+        )
+
     logger.set_level(args.verbosity)
 
     args.use_jailbreakbench = not args.not_jailbreakbench

@@ -1,5 +1,5 @@
 from common import get_api_key, conv_template, extract_json
-from language_models import APILiteLLM, LocalTransformers, LocalvLLM
+from language_models import APILiteLLM, LocalTransformers, LocalvLLM, HTTPChatModel
 from config import FASTCHAT_TEMPLATE_NAMES, Model
 
 # Models supported by JailbreakBench
@@ -14,36 +14,43 @@ def load_attack_and_target_models(args):
     # create attack model and target model
     use_vllm = getattr(args, 'use_vllm', False)
     
-    attackLM = AttackLM(model_name = args.attack_model, 
-                        max_n_tokens = args.attack_max_n_tokens, 
-                        max_n_attack_attempts = args.max_n_attack_attempts, 
-                        category = args.category,
-                        evaluate_locally = args.evaluate_locally,
-                        model_path = getattr(args, 'attack_model_path', None),
-                        peft_adapter_path = getattr(args, 'attack_peft_adapter', None),
-                        use_vllm = use_vllm,
-                        gpu_memory_utilization = getattr(args, 'attack_gpu_memory_utilization', 0.45),
-                        gpu_devices = getattr(args, 'attack_gpu', '0')
-                        )
+    attackLM = AttackLM(
+        model_name=args.attack_model, 
+        max_n_tokens=args.attack_max_n_tokens, 
+        max_n_attack_attempts=args.max_n_attack_attempts, 
+        category=args.category,
+        evaluate_locally=args.evaluate_locally,
+        model_path=getattr(args, 'attack_model_path', None),
+        peft_adapter_path=getattr(args, 'attack_peft_adapter', None),
+        use_vllm=use_vllm,
+        gpu_memory_utilization=getattr(args, 'attack_gpu_memory_utilization', 0.45),
+        gpu_devices=getattr(args, 'attack_gpu', '0'),
+        api_base=getattr(args, 'attack_api_base', None),
+        api_key="EMPTY",
+    )
     
-    targetLM = TargetLM(model_name = args.target_model,
-                        category = args.category,
-                        max_n_tokens = args.target_max_n_tokens,
-                        evaluate_locally = args.evaluate_locally,
-                        phase = args.jailbreakbench_phase,
-                        use_jailbreakbench = args.use_jailbreakbench,
-                        model_path = getattr(args, 'target_model_path', None),
-                        peft_adapter_path = getattr(args, 'target_peft_adapter', None),
-                        use_vllm = use_vllm,
-                        gpu_memory_utilization = getattr(args, 'target_gpu_memory_utilization', 0.45),
-                        gpu_devices = getattr(args, 'target_gpu', '0')
-                        )
+    targetLM = TargetLM(
+        model_name=args.target_model,
+        category=args.category,
+        max_n_tokens=args.target_max_n_tokens,
+        evaluate_locally=args.evaluate_locally,
+        phase=args.jailbreakbench_phase,
+        use_jailbreakbench=args.use_jailbreakbench,
+        model_path=getattr(args, 'target_model_path', None),
+        peft_adapter_path=getattr(args, 'target_peft_adapter', None),
+        use_vllm=use_vllm,
+        gpu_memory_utilization=getattr(args, 'target_gpu_memory_utilization', 0.45),
+        gpu_devices=getattr(args, 'target_gpu', '0'),
+        api_base=getattr(args, 'target_api_base', None),
+        api_key="EMPTY",
+    )
     
     return attackLM, targetLM
 
 def load_indiv_model(model_name, local = False, use_jailbreakbench=True, 
                      model_path=None, peft_adapter_path=None, use_vllm=False, 
-                     gpu_memory_utilization=0.9, gpu_devices="0"):
+                     gpu_memory_utilization=0.9, gpu_devices="0",
+                     api_base: str | None = None, api_key: str | None = None):
     """
     Load a model either via API or locally.
     
@@ -57,6 +64,14 @@ def load_indiv_model(model_name, local = False, use_jailbreakbench=True,
         gpu_memory_utilization: GPU memory utilization for vLLM (0.0 to 1.0)
         gpu_devices: GPU device(s) to use (e.g., "0" or "0,1,2,3")
     """
+    # Highest priority: if an explicit HTTP API base is provided, use that.
+    if api_base is not None:
+        return HTTPChatModel(
+            model_name=model_name,
+            api_base=api_base,
+            api_key=api_key or "EMPTY",
+        )
+
     if use_jailbreakbench: 
         if local:
             from jailbreakbench import LLMvLLM
@@ -104,7 +119,9 @@ class AttackLM():
                 peft_adapter_path: str = None,
                 use_vllm: bool = False,
                 gpu_memory_utilization: float = 0.9,
-                gpu_devices: str = "0"):
+                gpu_devices: str = "0",
+                api_base: str | None = None,
+                api_key: str | None = None):
         
         self.model_name = Model(model_name)
         self.max_n_tokens = max_n_tokens
@@ -123,9 +140,18 @@ class AttackLM():
                                       peft_adapter_path=peft_adapter_path,
                                       use_vllm=use_vllm,
                                       gpu_memory_utilization=gpu_memory_utilization,
-                                      gpu_devices=gpu_devices
+                                      gpu_devices=gpu_devices,
+                                      api_base=api_base,
+                                      api_key=api_key,
                                       )
-        self.initialize_output = self.model.use_open_source_model
+
+        # Only models that expose `use_open_source_model` and `post_message`
+        # (APILiteLLM / LocalTransformers / LocalvLLM) support the JSON-seeding
+        # trick for attacks. HTTPChatModel and other adapters simply skip it.
+        self.initialize_output = (
+            hasattr(self.model, "use_open_source_model")
+            and getattr(self.model, "use_open_source_model")
+        )
         self.template = FASTCHAT_TEMPLATE_NAMES[self.model_name]
 
     def preprocess_conversation(self, convs_list: list, prompts_list: list[str]):
@@ -235,7 +261,9 @@ class TargetLM():
             peft_adapter_path: str = None,
             use_vllm: bool = False,
             gpu_memory_utilization: float = 0.9,
-            gpu_devices: str = "0"):
+            gpu_devices: str = "0",
+            api_base: str | None = None,
+            api_key: str | None = None):
         
         self.model_name = model_name
         self.max_n_tokens = max_n_tokens
@@ -263,7 +291,9 @@ class TargetLM():
                                       peft_adapter_path=peft_adapter_path,
                                       use_vllm=use_vllm,
                                       gpu_memory_utilization=gpu_memory_utilization,
-                                      gpu_devices=gpu_devices)            
+                                      gpu_devices=gpu_devices,
+                                      api_base=api_base,
+                                      api_key=api_key)            
         
         # For non-JailbreakBench models, we need the template
         if not self.use_jailbreakbench:
