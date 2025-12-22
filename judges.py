@@ -3,7 +3,7 @@ from fastchat.model import (
 )
 import re
 from system_prompts import get_judge_system_prompt
-from language_models import APILiteLLM, LocalvLLM
+from language_models import APILiteLLM, LocalvLLM, HTTPChatModel
 from loggers import logger
 
 from jailbreakbench import Classifier
@@ -22,12 +22,17 @@ def load_judge(args, attackLM=None):
     # Automatically reuse the attack model if they match
     if (attackLM is not None and
         args.judge_model == args.attack_model and
-        args.evaluate_locally):
+        args.evaluate_locally and
+        not getattr(args, 'judge_api_base', None)):
         logger.info(f"Reusing attack model '{args.attack_model}' for judge (same model, same GPU: {args.attack_gpu})")
         return SharedModelJudge(args, attackLM)
 
     # Use startswith to match GPT models (gpt-3.5-turbo, gpt-4, etc.)
     # Previously used "gpt" in args.judge_model which incorrectly matched "gptq" in model names
+    # If an explicit HTTP API base is provided, always use HTTPJudge
+    if getattr(args, 'judge_api_base', None):
+        return HTTPJudge(args)
+
     if args.judge_model.startswith("gpt-"):
         return GPTJudge(args)
     elif args.judge_model == "no-judge":
@@ -254,7 +259,39 @@ class SharedModelJudge(JudgeBase):
         return outputs
 
 
-class OpenSourceJudge(JudgeBase):
-    def __init__(self, judge_model, judge_tokenizer, args):
-        # TODO: Implement open source judge
-        raise NotImplementedError
+class HTTPJudge(JudgeBase):
+    """Judge that scores using an existing OpenAI-compatible HTTP server (e.g., vLLM)."""
+
+    def __init__(self, args):
+        super(HTTPJudge, self).__init__(args)
+
+        api_base = getattr(args, 'judge_api_base', None)
+        if api_base is None:
+            raise ValueError("judge_api_base must be provided to use HTTPJudge.")
+
+        self.judge_model = HTTPChatModel(
+            model_name=self.judge_name,
+            api_base=api_base,
+            api_key="EMPTY",
+        )
+
+        logger.info(f"Using HTTP judge at {api_base} with model {self.judge_name}")
+
+    def create_conv(self, full_prompt):
+        """Create conversation in OpenAI API format for HTTP server."""
+        return [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": full_prompt}
+        ]
+
+    def score(self, attack_prompt_list, target_response_list):
+        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response))
+                      for prompt, response in zip(attack_prompt_list, target_response_list)]
+        raw_outputs = self.judge_model.batched_generate(
+            convs_list,
+            max_n_tokens=self.max_n_tokens,
+            temperature=self.temperature,
+            top_p=1,
+        )
+        outputs = [self.process_output(raw_output) for raw_output in raw_outputs]
+        return outputs
