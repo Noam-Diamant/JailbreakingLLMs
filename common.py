@@ -1,7 +1,6 @@
 import ast
 from loggers import logger
 from fastchat.model import get_conversation_template
-from system_prompts import get_attacker_system_prompts
 from config import API_KEY_NAMES
 import os 
 
@@ -65,13 +64,18 @@ def set_system_prompts(system_prompts, convs_list):
         conv.set_system_message(system_prompts[i%num_system_prompts])
         
 
-def initialize_conversations(n_streams: int, goal: str, target_str: str, attacker_template_name: str):
+def initialize_conversations(n_streams: int, goal: str, target_str: str, attacker_template_name: str, use_bio_prompts: bool = False):
     batchsize = n_streams
     init_msg = get_init_msg(goal, target_str)
     processed_response_list = [init_msg for _ in range(batchsize)]
     convs_list = [conv_template(attacker_template_name) for _ in range(batchsize)]
 
-    # Set system prompts
+    # Set system prompts - use bio prompts if specified
+    if use_bio_prompts:
+        from system_prompts_bio import get_attacker_system_prompts
+    else:
+        from system_prompts import get_attacker_system_prompts
+    
     system_prompts = get_attacker_system_prompts(goal, target_str)
     set_system_prompts(system_prompts, convs_list)
     return convs_list, processed_response_list, system_prompts

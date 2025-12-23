@@ -2,7 +2,6 @@ from fastchat.model import (
     get_conversation_template
 )
 import re
-from system_prompts import get_judge_system_prompt
 from language_models import APILiteLLM, LocalvLLM, HTTPChatModel
 from loggers import logger
 
@@ -58,6 +57,14 @@ class JudgeBase:
         self.judge_name = args.judge_model
         self.goal = args.goal
         self.target_str = args.target_str
+        
+        # Conditionally use bio prompts if specified
+        use_bio_prompts = getattr(args, 'use_bio_prompts', False)
+        if use_bio_prompts:
+            from system_prompts_bio import get_judge_system_prompt
+        else:
+            from system_prompts import get_judge_system_prompt
+        
         self.system_prompt = get_judge_system_prompt(args.goal, args.target_str)
 
     def get_judge_prompt(self, attack_prompt, target_response):
