@@ -50,8 +50,19 @@ def get_wandb_project_name(args):
     return f"original_model_{target_model}"
 
 
-def run_single_prompt(args, goal, target_str, category, index):
-    """Run PAIR for a single prompt. Returns True if successful, False otherwise."""
+def run_single_prompt(args, goal, target_str, category, index, attackLM=None, targetLM=None, judgeLM=None):
+    """Run PAIR for a single prompt. Returns True if successful, False otherwise.
+    
+    Args:
+        args: Arguments object
+        goal: The goal/question for this prompt
+        target_str: The target answer
+        category: Category of the prompt
+        index: Index of the prompt
+        attackLM: Pre-loaded attack model (optional, will load if None)
+        targetLM: Pre-loaded target model (optional, will load if None)
+        judgeLM: Pre-loaded judge model (optional, will load if None)
+    """
     memory_before = memory_usage_psutil()
 
     # Set goal and target_str in args for this iteration
@@ -60,11 +71,13 @@ def run_single_prompt(args, goal, target_str, category, index):
     args.category = category
     args.index = index
 
-    # Initialize models and judge
+    # Initialize models and judge (only if not provided)
     # Note: If attack and judge models are the same and running locally,
     # the same model instance will be reused to save GPU memory
-    attackLM, targetLM = load_attack_and_target_models(args)
-    judgeLM = load_judge(args, attackLM)
+    if attackLM is None or targetLM is None:
+        attackLM, targetLM = load_attack_and_target_models(args)
+    if judgeLM is None:
+        judgeLM = load_judge(args, attackLM)
     
     # Initialize conversations
     convs_list, processed_response_list, system_prompts = initialize_conversations(
@@ -157,6 +170,12 @@ def main(args):
         if use_bio:
             logger.info("Detected bio dataset - using system_prompts_bio.py")
         
+        # Load models once before processing all prompts (much more efficient!)
+        logger.info("Loading models once for all prompts...")
+        attackLM, targetLM = load_attack_and_target_models(args)
+        judgeLM = load_judge(args, attackLM)
+        logger.info("Models loaded successfully. Starting batch processing...")
+        
         # Track success across all prompts
         results = []
         successful_count = 0
@@ -174,7 +193,7 @@ def main(args):
             logger.info(f"{'='*80}\n")
             
             try:
-                success = run_single_prompt(args, goal, target_str, category, original_index)
+                success = run_single_prompt(args, goal, target_str, category, original_index, attackLM, targetLM, judgeLM)
                 results.append({
                     'index': original_index,
                     'goal': goal,
@@ -510,41 +529,78 @@ if __name__ == '__main__':
     # This ensures that if, e.g., attack and judge use the same model, they
     # both talk to the same vLLM server instead of starting duplicates.
     if getattr(args, "use_vllm", False):
-        base_ports = [8004, 8005, 8006]
-        model_to_port = {}
-        # Use a mutable container to allow updates inside the nested function
-        next_port_idx = [0]
+        # Check if ANY PEFT adapter is being used
+        has_any_peft = any([
+            getattr(args, 'target_peft_adapter', None),
+            getattr(args, 'attack_peft_adapter', None),
+            getattr(args, 'judge_peft_adapter', None)
+        ])
+        
+        # #region agent log
+        import json
+        import time
+        with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+            f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "C", "location": "main.py:512", "message": "Checking if any PEFT adapter is used", "data": {"has_any_peft": has_any_peft, "target_peft": getattr(args, 'target_peft_adapter', None), "attack_peft": getattr(args, 'attack_peft_adapter', None), "judge_peft": getattr(args, 'judge_peft_adapter', None)}, "timestamp": int(time.time() * 1000)}) + '\n')
+        # #endregion
 
-        def assign_port_for_model(model_name: str) -> int:
-            if model_name in model_to_port:
-                return model_to_port[model_name]
-            if next_port_idx[0] >= len(base_ports):
-                raise ValueError(
-                    "Requested more than 3 unique models while using vLLM. "
-                    "Only ports 8004, 8005, and 8006 are available."
-                )
-            port = base_ports[next_port_idx[0]]
-            model_to_port[model_name] = port
-            next_port_idx[0] += 1
-            return port
+        # If ANY PEFT adapter is used, disable HTTP vLLM servers entirely
+        # All models will load locally (with or without PEFT adapters)
+        if has_any_peft:
+            # #region agent log
+            with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "C", "location": "main.py:525", "message": "PEFT adapter detected - disabling HTTP vLLM servers, using local loading", "data": {}, "timestamp": int(time.time() * 1000)}) + '\n')
+            # #endregion
+            logger.info(
+                f"PEFT adapter(s) detected - disabling HTTP vLLM servers. "
+                f"All models will load locally: "
+                f"target_model={args.target_model}, "
+                f"attack_model={args.attack_model}, "
+                f"judge_model={args.judge_model}"
+            )
+            # Explicitly set api_base to None for all models to force local loading
+            if getattr(args, "target_api_base", None) is None:
+                args.target_api_base = None
+            if getattr(args, "attack_api_base", None) is None:
+                args.attack_api_base = None
+            if getattr(args, "judge_api_base", None) is None:
+                args.judge_api_base = None
+        else:
+            # No PEFT adapters - use HTTP vLLM servers as before
+            base_ports = [8004, 8005, 8006]
+            model_to_port = {}
+            # Use a mutable container to allow updates inside the nested function
+            next_port_idx = [0]
 
-        target_port = assign_port_for_model(args.target_model)
-        attack_port = assign_port_for_model(args.attack_model)
-        judge_port = assign_port_for_model(args.judge_model)
+            def assign_port_for_model(model_name: str) -> int:
+                if model_name in model_to_port:
+                    return model_to_port[model_name]
+                if next_port_idx[0] >= len(base_ports):
+                    raise ValueError(
+                        "Requested more than 3 unique models while using vLLM. "
+                        "Only ports 8004, 8005, and 8006 are available."
+                    )
+                port = base_ports[next_port_idx[0]]
+                model_to_port[model_name] = port
+                next_port_idx[0] += 1
+                return port
 
-        if getattr(args, "target_api_base", None) is None:
-            args.target_api_base = f"http://localhost:{target_port}/v1"
-        if getattr(args, "attack_api_base", None) is None:
-            args.attack_api_base = f"http://localhost:{attack_port}/v1"
-        if getattr(args, "judge_api_base", None) is None:
-            args.judge_api_base = f"http://localhost:{judge_port}/v1"
+            target_port = assign_port_for_model(args.target_model)
+            attack_port = assign_port_for_model(args.attack_model)
+            judge_port = assign_port_for_model(args.judge_model)
 
-        logger.info(
-            f"Using external vLLM HTTP servers (use_vllm=True): "
-            f"target_model={args.target_model} -> {args.target_api_base}, "
-            f"attack_model={args.attack_model} -> {args.attack_api_base}, "
-            f"judge_model={args.judge_model} -> {args.judge_api_base}"
-        )
+            if getattr(args, "target_api_base", None) is None:
+                args.target_api_base = f"http://localhost:{target_port}/v1"
+            if getattr(args, "attack_api_base", None) is None:
+                args.attack_api_base = f"http://localhost:{attack_port}/v1"
+            if getattr(args, "judge_api_base", None) is None:
+                args.judge_api_base = f"http://localhost:{judge_port}/v1"
+
+            logger.info(
+                f"Using external vLLM HTTP servers (use_vllm=True): "
+                f"target_model={args.target_model} -> {args.target_api_base}, "
+                f"attack_model={args.attack_model} -> {args.attack_api_base}, "
+                f"judge_model={args.judge_model} -> {args.judge_api_base}"
+            )
 
     logger.set_level(args.verbosity)
 

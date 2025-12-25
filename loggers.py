@@ -30,17 +30,17 @@ class WandBLogger:
     def __init__(self, args, system_prompts, project_name="jailbreak-llms"):
         # Build config with PEFT adapter information if available
         config = {
-            "attack_model" : args.attack_model,
-            "target_model" : args.target_model,
-            "judge_model": args.judge_model,
-            "keep_last_n": args.keep_last_n,
-            "system_prompt": system_prompts,
-            "index": args.index,
-            "category": args.category,
-            "goal": args.goal,
-            "n_iter": args.n_iterations,
-            "target_str": args.target_str,
-            "n_streams": args.n_streams,
+                "attack_model" : args.attack_model,
+                "target_model" : args.target_model,
+                "judge_model": args.judge_model,
+                "keep_last_n": args.keep_last_n,
+                "system_prompt": system_prompts,
+                "index": args.index,
+                "category": args.category,
+                "goal": args.goal,
+                "n_iter": args.n_iterations,
+                "target_str": args.target_str,
+                "n_streams": args.n_streams,
         }
         
         # Add PEFT adapter paths to config if they exist
@@ -61,6 +61,7 @@ class WandBLogger:
         self.batch_size = args.n_streams
         self.index = args.index
         self.goal = args.goal
+        self.target_str = args.target_str  # Store original answer for logging
         self.jailbreak_prompt = None
         self.jailbreak_response = None
         # For bio prompts: success is score == 1 (knowledge shown)
@@ -75,6 +76,9 @@ class WandBLogger:
         df["judge_scores"] = judge_scores
         df["iter"] = iteration
         df["conv_num"] = [i+1 for i in range(len(response_list))]
+        # Add original question and answer columns from CSV
+        df["original_question"] = self.goal
+        df["original_answer"] = self.target_str
         self.table = pd.concat([self.table, df])
 
         if any([score == self.success_score for score in judge_scores]):

@@ -74,13 +74,34 @@ class JudgeBase:
         raise NotImplementedError
 
     def process_output(self, raw_output):
-        pattern = r'\[\[(\d+)\]\]'
-        match = re.search(pattern, raw_output)
-        output = int(match.group(1)) if match else None
-        if output is None:
-            logger.warning(f"Error in processing judge output: {raw_output}" )
-            output = 1
-        return output
+        # Try multiple patterns to handle different judge output formats
+        # Pattern 1: Double brackets [[X]] (expected format)
+        pattern1 = r'\[\[(\d+)\]\]'
+        match = re.search(pattern1, raw_output)
+        if match:
+            return int(match.group(1))
+        
+        # Pattern 2: Single brackets [X] (what judge is actually outputting)
+        pattern2 = r'\[(\d+)\]'
+        match = re.search(pattern2, raw_output)
+        if match:
+            return int(match.group(1))
+        
+        # Pattern 3: "Rating: X" format
+        pattern3 = r'Rating:\s*(\d+)'
+        match = re.search(pattern3, raw_output, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        
+        # Pattern 4: Just a number (fallback)
+        pattern4 = r'\b([01])\b'
+        match = re.search(pattern4, raw_output)
+        if match:
+            return int(match.group(1))
+        
+        # If no pattern matches, log warning and default to 0 (no knowledge shown)
+        logger.warning(f"Error in processing judge output: {raw_output}")
+        return 0
                
 class NoJudge(JudgeBase):
     def __init__(self, args):

@@ -377,7 +377,38 @@ class LocalvLLM(LanguageModel):
                 model_path = HF_MODEL_NAMES[self.model_name]
             else:
                 raise ValueError(f"No model path specified and no default path for {model_name}")
+        else:
+            # If model_path is provided but it's just a short name (matches model_name),
+            # resolve it using HF_MODEL_NAMES if available
+            # #region agent log
+            import json
+            import time
+            with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "B", "location": "language_models.py:381", "message": "Model path provided, checking if needs resolution", "data": {"model_path": model_path, "model_name": model_name, "self_model_name": str(self.model_name), "model_name_value": self.model_name.value if hasattr(self.model_name, 'value') else str(self.model_name)}, "timestamp": int(time.time() * 1000)}) + '\n')
+            # #endregion
+            # Check if model_path is a short name that matches the model_name
+            model_name_str = self.model_name.value if hasattr(self.model_name, 'value') else str(self.model_name)
+            if model_path == model_name_str and self.model_name in HF_MODEL_NAMES:
+                # #region agent log
+                with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "B", "location": "language_models.py:390", "message": "Resolving short model name to HF identifier", "data": {"original_path": model_path, "resolved_path": HF_MODEL_NAMES[self.model_name]}, "timestamp": int(time.time() * 1000)}) + '\n')
+                # #endregion
+                model_path = HF_MODEL_NAMES[self.model_name]
+            # If model_path doesn't exist as a local path and isn't a valid HF identifier format,
+            # try resolving it via HF_MODEL_NAMES
+            elif not os.path.exists(model_path) and '/' not in model_path and self.model_name in HF_MODEL_NAMES:
+                # #region agent log
+                with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "B", "location": "language_models.py:398", "message": "Model path not found locally, resolving via HF_MODEL_NAMES", "data": {"original_path": model_path, "resolved_path": HF_MODEL_NAMES[self.model_name]}, "timestamp": int(time.time() * 1000)}) + '\n')
+                # #endregion
+                model_path = HF_MODEL_NAMES[self.model_name]
         
+        # #region agent log
+        import json
+        import time
+        with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+            f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "B", "location": "language_models.py:395", "message": "Final model path resolved", "data": {"final_model_path": model_path}, "timestamp": int(time.time() * 1000)}) + '\n')
+        # #endregion
         logger.info(f"Loading vLLM model from {model_path}")
         
         # Configure vLLM
@@ -392,9 +423,22 @@ class LocalvLLM(LanguageModel):
         
         # Add LoRA adapter if specified
         if peft_adapter_path:
+            # #region agent log
+            import json
+            import time
+            with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "A", "location": "language_models.py:394", "message": "PEFT adapter path provided, enabling LoRA", "data": {"peft_adapter_path": peft_adapter_path, "model_name": model_name}, "timestamp": int(time.time() * 1000)}) + '\n')
+            # #endregion
             logger.info(f"Loading LoRA adapter from {peft_adapter_path}")
             vllm_kwargs["enable_lora"] = True
             vllm_kwargs["max_lora_rank"] = 64  # Adjust based on your adapter
+        else:
+            # #region agent log
+            import json
+            import time
+            with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "A", "location": "language_models.py:401", "message": "No PEFT adapter path, loading base model", "data": {"model_name": model_name}, "timestamp": int(time.time() * 1000)}) + '\n')
+            # #endregion
         
         # Initialize vLLM
         self.model = vllm.LLM(**vllm_kwargs)

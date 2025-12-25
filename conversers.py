@@ -66,6 +66,12 @@ def load_indiv_model(model_name, local = False, use_jailbreakbench=True,
     """
     # Highest priority: if an explicit HTTP API base is provided, use that.
     if api_base is not None:
+        # #region agent log
+        import json
+        import time
+        with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+            f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "A", "location": "conversers.py:68", "message": "Using HTTPChatModel (api_base set)", "data": {"model_name": model_name, "api_base": api_base, "peft_adapter_path": peft_adapter_path, "local": local}, "timestamp": int(time.time() * 1000)}) + '\n')
+        # #endregion
         return HTTPChatModel(
             model_name=model_name,
             api_base=api_base,
@@ -84,6 +90,12 @@ def load_indiv_model(model_name, local = False, use_jailbreakbench=True,
         if local:
             # Choose backend based on use_vllm flag
             if use_vllm:
+                # #region agent log
+                import json
+                import time
+                with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "A", "location": "conversers.py:87", "message": "Using LocalvLLM (local=True, use_vllm=True)", "data": {"model_name": model_name, "peft_adapter_path": peft_adapter_path, "model_path": model_path}, "timestamp": int(time.time() * 1000)}) + '\n')
+                # #endregion
                 # Use vLLM with optional LoRA adapter
                 lm = LocalvLLM(
                     model_name=model_name,
