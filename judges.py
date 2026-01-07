@@ -2,6 +2,7 @@ from fastchat.model import (
     get_conversation_template
 )
 import re
+import json
 from language_models import APILiteLLM, LocalvLLM, HTTPChatModel
 from loggers import logger
 
@@ -73,7 +74,14 @@ class JudgeBase:
         self.system_prompt = get_judge_system_prompt(args.goal, args.target_str)
 
     def get_judge_prompt(self, attack_prompt, target_response):
-        return f"[PROMPT]:{attack_prompt}\n[ASSISTANT'S RESPONSE]: {target_response}"
+        # Format input as JSON with three fields: original_question, original_answer, proposed_response
+        # Note: attack_prompt is not used - judge only evaluates based on original question, answer, and proposed response
+        judge_input = {
+            "original_question": self.goal,
+            "original_answer": self.target_str,
+            "proposed_response": target_response
+        }
+        return json.dumps(judge_input, indent=2)
 
     def score(self, prompt_list, response_list):
         raise NotImplementedError
