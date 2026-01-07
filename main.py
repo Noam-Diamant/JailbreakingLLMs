@@ -16,13 +16,18 @@ def memory_usage_psutil():
     return mem
 
 
-def get_wandb_project_name(args):
+def get_wandb_project_name(args, timestamp=None):
     """
     Determine WandB project name based on whether PEFT adapters are being used.
     Returns 'original_model_<model>_<timestamp>' if no PEFT adapters, otherwise returns 'peft_<adapter>_<model>_<timestamp>'.
+    
+    Args:
+        args: Arguments object
+        timestamp: Optional timestamp string. If None, generates a new one (for backward compatibility).
     """
-    # Generate timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Generate timestamp if not provided
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Check if any PEFT adapters are being used
     attack_peft = getattr(args, 'attack_peft_adapter', None)
@@ -36,14 +41,14 @@ def get_wandb_project_name(args):
     
     # If no PEFT adapters are used, return 'original_model_<target_model>_<timestamp>'
     if not any([attack_peft, target_peft, judge_peft]):
-        return f"original_model_{target_model}_heavy_balanced_{timestamp}"
+        return f"original_model_{target_model}_{timestamp}"
     
     # If PEFT adapters are used, create a project name based on the adapter paths
     # Priority: target > attack > judge (since target is usually the main model being tested)
     if target_peft:
         # Extract adapter name from path (use last directory name or filename)
         adapter_name = os.path.basename(target_peft.rstrip('/'))
-        return f"peft_{adapter_name}_{target_model}_medium_balanced_{timestamp}"
+        return f"peft_{adapter_name}_{target_model}_{timestamp}"
     elif attack_peft:
         adapter_name = os.path.basename(attack_peft.rstrip('/'))
         return f"peft_{adapter_name}_{attack_model}_{timestamp}"
@@ -91,7 +96,9 @@ def run_single_prompt(args, goal, target_str, category, index, attackLM=None, ta
     batchsize = args.n_streams
     
     # Determine WandB project name based on PEFT adapter usage
-    wandb_project = get_wandb_project_name(args)
+    # Use shared timestamp if available (from main()), otherwise generate new one
+    shared_timestamp = getattr(args, 'wandb_timestamp', None)
+    wandb_project = get_wandb_project_name(args, timestamp=shared_timestamp)
     wandb_logger = WandBLogger(args, system_prompts, project_name=wandb_project)
     target_response_list, judge_scores = None, None
     success = False
@@ -179,6 +186,10 @@ def main(args):
         attackLM, targetLM = load_attack_and_target_models(args)
         judgeLM = load_judge(args, attackLM)
         logger.info("Models loaded successfully. Starting batch processing...")
+        
+        # Generate timestamp once for all prompts (shared WandB project)
+        shared_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        args.wandb_timestamp = shared_timestamp
         
         # Track success across all prompts
         results = []
@@ -552,20 +563,9 @@ if __name__ == '__main__':
             getattr(args, 'judge_peft_adapter', None)
         ])
         
-        # #region agent log
-        import json
-        import time
-        with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
-            f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "C", "location": "main.py:512", "message": "Checking if any PEFT adapter is used", "data": {"has_any_peft": has_any_peft, "target_peft": getattr(args, 'target_peft_adapter', None), "attack_peft": getattr(args, 'attack_peft_adapter', None), "judge_peft": getattr(args, 'judge_peft_adapter', None)}, "timestamp": int(time.time() * 1000)}) + '\n')
-        # #endregion
-
         # If ANY PEFT adapter is used, disable HTTP vLLM servers entirely
         # All models will load locally (with or without PEFT adapters)
         if has_any_peft:
-            # #region agent log
-            with open('/dsi/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId": "debug-session", "runId": "pre-fix", "hypothesisId": "C", "location": "main.py:525", "message": "PEFT adapter detected - disabling HTTP vLLM servers, using local loading", "data": {}, "timestamp": int(time.time() * 1000)}) + '\n')
-            # #endregion
             logger.info(
                 f"PEFT adapter(s) detected - disabling HTTP vLLM servers. "
                 f"All models will load locally: "
