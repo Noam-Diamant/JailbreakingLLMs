@@ -8,6 +8,7 @@ import os
 import time
 import csv
 import pandas as pd
+from datetime import datetime
 def memory_usage_psutil():
     # Returns the memory usage in MB
     process = psutil.Process(os.getpid())
@@ -18,8 +19,11 @@ def memory_usage_psutil():
 def get_wandb_project_name(args):
     """
     Determine WandB project name based on whether PEFT adapters are being used.
-    Returns 'original_model_<model>' if no PEFT adapters, otherwise returns 'peft_<adapter>_<model>'.
+    Returns 'original_model_<model>_<timestamp>' if no PEFT adapters, otherwise returns 'peft_<adapter>_<model>_<timestamp>'.
     """
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
     # Check if any PEFT adapters are being used
     attack_peft = getattr(args, 'attack_peft_adapter', None)
     target_peft = getattr(args, 'target_peft_adapter', None)
@@ -30,24 +34,24 @@ def get_wandb_project_name(args):
     attack_model = getattr(args, 'attack_model', 'unknown')
     judge_model = getattr(args, 'judge_model', 'unknown')
     
-    # If no PEFT adapters are used, return 'original_model_<target_model>'
+    # If no PEFT adapters are used, return 'original_model_<target_model>_<timestamp>'
     if not any([attack_peft, target_peft, judge_peft]):
-        return f"original_model_{target_model}_heavy_balanced"
+        return f"original_model_{target_model}_heavy_balanced_{timestamp}"
     
     # If PEFT adapters are used, create a project name based on the adapter paths
     # Priority: target > attack > judge (since target is usually the main model being tested)
     if target_peft:
         # Extract adapter name from path (use last directory name or filename)
         adapter_name = os.path.basename(target_peft.rstrip('/'))
-        return f"peft_{adapter_name}_{target_model}_medium_balanced"
+        return f"peft_{adapter_name}_{target_model}_medium_balanced_{timestamp}"
     elif attack_peft:
         adapter_name = os.path.basename(attack_peft.rstrip('/'))
-        return f"peft_{adapter_name}_{attack_model}"
+        return f"peft_{adapter_name}_{attack_model}_{timestamp}"
     elif judge_peft:
         adapter_name = os.path.basename(judge_peft.rstrip('/'))
-        return f"peft_{adapter_name}_{judge_model}"
+        return f"peft_{adapter_name}_{judge_model}_{timestamp}"
     
-    return f"original_model_{target_model}"
+    return f"original_model_{target_model}_{timestamp}"
 
 
 def run_single_prompt(args, goal, target_str, category, index, attackLM=None, targetLM=None, judgeLM=None):
