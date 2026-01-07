@@ -5,7 +5,6 @@ import re
 from language_models import APILiteLLM, LocalvLLM, HTTPChatModel
 from loggers import logger
 
-from jailbreakbench import Classifier
 import os
 
 def load_judge(args, attackLM=None):
@@ -28,18 +27,24 @@ def load_judge(args, attackLM=None):
 
     # Use startswith to match GPT models (gpt-3.5-turbo, gpt-4, etc.)
     # Previously used "gpt" in args.judge_model which incorrectly matched "gptq" in model names
-    # If an explicit HTTP API base is provided, always use HTTPJudge
-    if getattr(args, 'judge_api_base', None):
-        return HTTPJudge(args)
-
-    if args.judge_model.startswith("gpt-"):
-        return GPTJudge(args)
+    
+    # Check for special judge types first (before checking API base)
+    if args.judge_model == "dspy":
+        # DSPy optimized judge (can use API base for vLLM)
+        return DSPyJudge(args)
     elif args.judge_model == "no-judge":
         return NoJudge(args)
     elif args.judge_model == "jailbreakbench":
         return JBBJudge(os.environ["TOGETHER_API_KEY"])
     elif args.judge_model == "gcg":
         return GCGJudge()
+    
+    # If an explicit HTTP API base is provided, use HTTPJudge
+    if getattr(args, 'judge_api_base', None):
+        return HTTPJudge(args)
+
+    if args.judge_model.startswith("gpt-"):
+        return GPTJudge(args)
     elif args.judge_model == "qwen2-57b-a14b-instruct-gptq-int4":
         # Support local execution for Qwen judge
         evaluate_locally = getattr(args, 'evaluate_judge_locally', False)
@@ -133,6 +138,8 @@ class GPTJudge(JudgeBase):
     
 class JBBJudge(JudgeBase):
     def __init__(self,classifier_path):
+        # Lazy import to avoid dependency issues when not using this judge
+        from jailbreakbench import Classifier
         self.judge_model = Classifier(classifier_path)
         self.judge_name = "JBBJudge"
 
@@ -323,3 +330,145 @@ class HTTPJudge(JudgeBase):
         )
         outputs = [self.process_output(raw_output) for raw_output in raw_outputs]
         return outputs
+
+
+class DSPyJudge(JudgeBase):
+    """DSPy optimized judge that uses compiled/optimized prompts."""
+    
+    def __init__(self, args):
+        super(DSPyJudge, self).__init__(args)
+        
+        # Import DSPy
+        try:
+            import dspy
+        except ImportError:
+            raise ImportError(
+                "DSPy not installed. Install with: pip install dspy-ai"
+            )
+        
+        # Load compiled judge if path is provided
+        judge_path = getattr(args, 'judge_dspy_path', None)
+        if judge_path and os.path.exists(judge_path):
+            from compile_dspy_judge import DSPyJudgeModule, load_judge
+            self.dspy_judge = load_judge(judge_path)
+            logger.info(f"Loaded DSPy judge from {judge_path}")
+        else:
+            # Use uncompiled judge (will use default prompts)
+            from compile_dspy_judge import DSPyJudgeModule
+            self.dspy_judge = DSPyJudgeModule()
+            logger.info("Using uncompiled DSPy judge (default prompts)")
+        
+        # Setup DSPy language model
+        self._setup_dspy_lm(args)
+        
+        self.judge_name = "DSPyJudge"
+    
+    def _setup_dspy_lm(self, args):
+        """Setup DSPy language model using project's infrastructure."""
+        import dspy
+        import os
+        
+        model_name = args.judge_model if args.judge_model != "dspy" else getattr(args, 'judge_dspy_model', 'qwen2-57b-a14b-instruct-gptq-int4')
+        
+        # Check if HTTP API base is provided
+        api_base = getattr(args, 'judge_api_base', None)
+        
+        if api_base:
+            # Use HTTP vLLM server
+            from config import Model, HF_MODEL_NAMES
+            try:
+                model_enum = Model(model_name)
+            except ValueError:
+                # If model_name is not in Model enum, use it directly
+                model_enum = None
+            
+            if model_enum and model_enum in HF_MODEL_NAMES:
+                served_name = HF_MODEL_NAMES[model_enum]
+            else:
+                served_name = model_name
+            
+            # Configure DSPy to use OpenAI-compatible endpoint
+            # DSPy uses litellm under the hood, which supports custom endpoints
+            lm = dspy.LM(
+                model=f"openai/{served_name}",
+                api_base=api_base,
+                api_key="EMPTY"
+            )
+            logger.info(f"DSPy judge using HTTP endpoint: {api_base} with model {served_name}")
+        else:
+            # If using vLLM locally, check if judge model matches attack/target
+            # and use their API base if available
+            if args.evaluate_locally and getattr(args, 'use_vllm', False):
+                # Try to infer API base from judge model assignment
+                # When using vLLM, models are assigned to ports 8004, 8005, 8006
+                # We need to determine which port the judge model uses
+                from config import Model, HF_MODEL_NAMES
+                try:
+                    model_enum = Model(model_name)
+                except ValueError:
+                    model_enum = None
+                
+                # Check if judge model (the actual model, not "dspy") matches attack or target
+                # (they might share API base)
+                # Note: model_name here is the actual judge model (from judge_dspy_model), not "dspy"
+                if model_name == args.attack_model and getattr(args, 'attack_api_base', None):
+                    api_base = args.attack_api_base
+                    logger.info(f"Judge model matches attacker - reusing attack API base: {api_base}")
+                elif model_name == args.target_model and getattr(args, 'target_api_base', None):
+                    api_base = args.target_api_base
+                    logger.info(f"Judge model matches target - reusing target API base: {api_base}")
+                else:
+                    # Use the judge_api_base that was set by main.py's port assignment logic
+                    api_base = getattr(args, 'judge_api_base', None)
+                    if api_base is None:
+                        # Fallback: assume judge is on port 8006 (third model)
+                        api_base = "http://localhost:8006/v1"
+                        logger.warning(f"Judge API base not set, using fallback: {api_base}")
+                    else:
+                        logger.info(f"Using judge API base: {api_base}")
+                
+                if model_enum and model_enum in HF_MODEL_NAMES:
+                    served_name = HF_MODEL_NAMES[model_enum]
+                else:
+                    served_name = model_name
+                
+                lm = dspy.LM(
+                    model=f"openai/{served_name}",
+                    api_base=api_base,
+                    api_key="EMPTY"
+                )
+                logger.info(f"DSPy judge using inferred HTTP endpoint: {api_base} with model {served_name}")
+            else:
+                raise ValueError(
+                    "DSPy judge requires --judge-api-base for vLLM models, or "
+                    "use --evaluate-locally --use-vllm to auto-detect endpoint."
+                )
+        
+        dspy.configure(lm=lm)
+        self.dspy_lm = lm
+    
+    def score(self, attack_prompt_list, target_response_list):
+        """Score responses using DSPy judge."""
+        scores = []
+        
+        for attack_prompt, target_response in zip(attack_prompt_list, target_response_list):
+            # Use DSPy judge to predict
+            prediction = self.dspy_judge(
+                attack_prompt=attack_prompt,
+                target_response=target_response,
+                original_question=self.goal,
+                original_answer=self.target_str
+            )
+            
+            # Extract score (should be 0 or 1)
+            try:
+                score = int(prediction.knowledge_score)
+                score = 1 if score >= 1 else 0
+            except (ValueError, AttributeError, TypeError):
+                # Fallback: check reasoning or use default
+                logger.warning(f"Could not parse score from DSPy output: {prediction}")
+                score = 0
+            
+            scores.append(score)
+        
+        return scores

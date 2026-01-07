@@ -1,0 +1,117 @@
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:58:44 [api_server.py:1772] vLLM API server version 0.12.0
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:58:44 [utils.py:253] non-default args: {'model_tag': 'meta-llama/Llama-3.1-8B', 'port': 8004, 'api_key': ['EMPTY'], 'model': 'meta-llama/Llama-3.1-8B', 'max_model_len': 8192}
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:58:46 [model.py:637] Resolved architecture: LlamaForCausalLM
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:58:46 [model.py:1750] Using max model len 8192
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:58:46 [scheduler.py:228] Chunked prefill is enabled with max_num_batched_tokens=2048.
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:58:59 [core.py:93] Initializing a V1 LLM engine (v0.12.0) with config: model='meta-llama/Llama-3.1-8B', speculative_config=None, tokenizer='meta-llama/Llama-3.1-8B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=8192, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_fallback=False, disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01), seed=0, served_model_name=meta-llama/Llama-3.1-8B, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'level': None, 'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::kda_attention', 'vllm::sparse_attn_indexer'], 'compile_mm_encoder': False, 'compile_sizes': [], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'eliminate_noops': True, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>}, 'local_cache_dir': None}
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:00 [parallel_state.py:1200] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://192.168.2.71:40177 backend=nccl
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:00 [parallel_state.py:1408] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:01 [gpu_model_runner.py:3467] Starting to load model meta-llama/Llama-3.1-8B...
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:02 [cuda.py:411] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION']
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Loading safetensors checkpoint shards:   0% Completed | 0/4 [00:00<?, ?it/s]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Loading safetensors checkpoint shards:  25% Completed | 1/4 [00:00<00:02,  1.04it/s]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Loading safetensors checkpoint shards:  50% Completed | 2/4 [00:02<00:02,  1.06s/it]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Loading safetensors checkpoint shards:  75% Completed | 3/4 [00:02<00:00,  1.28it/s]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Loading safetensors checkpoint shards: 100% Completed | 4/4 [00:03<00:00,  1.22it/s]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Loading safetensors checkpoint shards: 100% Completed | 4/4 [00:03<00:00,  1.17it/s]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m 
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:08 [default_loader.py:308] Loading weights took 3.68 seconds
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:08 [gpu_model_runner.py:3549] Model loading took 14.9889 GiB memory and 6.523669 seconds
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:16 [backends.py:655] Using cache directory: /home/dsi/diamann2/.cache/vllm/torch_compile_cache/675465a246/rank_0_0/backbone for vLLM's torch.compile
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:16 [backends.py:715] Dynamo bytecode transform time: 7.31 s
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:17 [backends.py:257] Cache the graph for dynamic shape for later use
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:22 [backends.py:288] Compiling a graph for dynamic shape takes 5.23 s
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:23 [monitor.py:34] torch.compile takes 12.54 s in total
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:25 [gpu_worker.py:359] Available KV cache memory: 23.74 GiB
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:25 [kv_cache_utils.py:1286] GPU KV cache size: 194,448 tokens
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:25 [kv_cache_utils.py:1291] Maximum concurrency for 8,192 tokens per request: 23.74x
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   2%|▏         | 1/51 [00:00<00:06,  7.66it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   4%|▍         | 2/51 [00:00<00:08,  5.90it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   8%|▊         | 4/51 [00:00<00:07,  6.69it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  12%|█▏        | 6/51 [00:00<00:05,  8.99it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  16%|█▌        | 8/51 [00:00<00:03, 10.93it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|█▉        | 10/51 [00:00<00:03, 12.74it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  24%|██▎       | 12/51 [00:01<00:02, 14.15it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  27%|██▋       | 14/51 [00:01<00:02, 15.27it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 16/51 [00:01<00:02, 16.17it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  35%|███▌      | 18/51 [00:01<00:01, 16.68it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  39%|███▉      | 20/51 [00:01<00:01, 17.25it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 22/51 [00:02<00:04,  7.13it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  47%|████▋     | 24/51 [00:02<00:03,  8.81it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████     | 26/51 [00:02<00:02,  8.52it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  55%|█████▍    | 28/51 [00:02<00:02,  8.54it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  59%|█████▉    | 30/51 [00:02<00:02,  8.81it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 32/51 [00:03<00:02,  8.66it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  67%|██████▋   | 34/51 [00:03<00:01,  9.99it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  73%|███████▎  | 37/51 [00:03<00:01, 12.52it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  76%|███████▋  | 39/51 [00:03<00:00, 13.69it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  82%|████████▏ | 42/51 [00:03<00:00, 15.53it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  88%|████████▊ | 45/51 [00:03<00:00, 17.12it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 48/51 [00:04<00:00, 18.34it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 51/51 [00:04<00:00, 18.99it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 51/51 [00:04<00:00, 12.21it/s]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m Capturing CUDA graphs (decode, FULL):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):   3%|▎         | 1/35 [00:00<00:16,  2.10it/s]Capturing CUDA graphs (decode, FULL):   6%|▌         | 2/35 [00:00<00:10,  3.20it/s]Capturing CUDA graphs (decode, FULL):  11%|█▏        | 4/35 [00:00<00:05,  5.19it/s]Capturing CUDA graphs (decode, FULL):  17%|█▋        | 6/35 [00:01<00:03,  7.92it/s]Capturing CUDA graphs (decode, FULL):  23%|██▎       | 8/35 [00:01<00:03,  8.04it/s]Capturing CUDA graphs (decode, FULL):  29%|██▊       | 10/35 [00:01<00:03,  8.32it/s]Capturing CUDA graphs (decode, FULL):  37%|███▋      | 13/35 [00:01<00:02,  9.29it/s]Capturing CUDA graphs (decode, FULL):  46%|████▌     | 16/35 [00:01<00:01, 11.81it/s]Capturing CUDA graphs (decode, FULL):  54%|█████▍    | 19/35 [00:02<00:01, 14.21it/s]Capturing CUDA graphs (decode, FULL):  63%|██████▎   | 22/35 [00:02<00:00, 16.18it/s]Capturing CUDA graphs (decode, FULL):  71%|███████▏  | 25/35 [00:02<00:00, 17.87it/s]Capturing CUDA graphs (decode, FULL):  80%|████████  | 28/35 [00:02<00:00, 19.34it/s]Capturing CUDA graphs (decode, FULL):  89%|████████▊ | 31/35 [00:02<00:00, 20.50it/s]Capturing CUDA graphs (decode, FULL):  97%|█████████▋| 34/35 [00:02<00:00, 21.54it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 35/35 [00:03<00:00, 10.50it/s]
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:34 [gpu_model_runner.py:4466] Graph capturing finished in 9 secs, took 0.57 GiB
+[0;36m(EngineCore_DP0 pid=346922)[0;0m INFO 12-22 12:59:34 [core.py:254] init engine (profile, create kv cache, warmup model) took 25.48 seconds
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:36 [api_server.py:1520] Supported tasks: ['generate']
+[0;36m(APIServer pid=346393)[0;0m WARNING 12-22 12:59:36 [model.py:1576] Default sampling parameters have been overridden by the model's Hugging Face generation config recommended from the model creator. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`.
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:36 [serving_responses.py:194] Using default chat sampling params from model: {'temperature': 0.6, 'top_p': 0.9}
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:36 [serving_chat.py:133] Using default chat sampling params from model: {'temperature': 0.6, 'top_p': 0.9}
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [serving_completion.py:73] Using default completion sampling params from model: {'temperature': 0.6, 'top_p': 0.9}
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [serving_chat.py:133] Using default chat sampling params from model: {'temperature': 0.6, 'top_p': 0.9}
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [api_server.py:1847] Starting vLLM API server 0 on http://0.0.0.0:8004
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:38] Available routes are:
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /openapi.json, Methods: HEAD, GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /docs, Methods: HEAD, GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /docs/oauth2-redirect, Methods: HEAD, GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /redoc, Methods: HEAD, GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /health, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /load, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /pause, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /resume, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /is_paused, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /tokenize, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /detokenize, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/models, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /version, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/responses, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/responses/{response_id}, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/responses/{response_id}/cancel, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/messages, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/chat/completions, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/completions, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/audio/transcriptions, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/audio/translations, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /scale_elastic_ep, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /is_scaling_elastic_ep, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /inference/v1/generate, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /ping, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /ping, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /invocations, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /metrics, Methods: GET
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /classify, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/embeddings, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /score, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/score, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /rerank, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v1/rerank, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /v2/rerank, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 12:59:37 [launcher.py:46] Route: /pooling, Methods: POST
+[0;36m(APIServer pid=346393)[0;0m INFO:     Started server process [346393]
+[0;36m(APIServer pid=346393)[0;0m INFO:     Waiting for application startup.
+[0;36m(APIServer pid=346393)[0;0m INFO:     Application startup complete.
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 13:04:32 [chat_utils.py:574] Detected the chat template content format to be 'string'. You can set `--chat-template-content-format` to override this.
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259] Error in preprocessing prompt inputs
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259] Traceback (most recent call last):
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/serving_chat.py", line 237, in create_chat_completion
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259]     ) = await self._preprocess_chat(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/serving_engine.py", line 1133, in _preprocess_chat
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259]     request_prompt = apply_hf_chat_template(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/chat_utils.py", line 1751, in apply_hf_chat_template
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259]     raise ValueError(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:32 [serving_chat.py:259] ValueError: As of transformers v4.44, default chat template is no longer allowed, so you must provide a chat template if the tokenizer does not define one.
+[0;36m(APIServer pid=346393)[0;0m /private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/serving_chat.py:260: RuntimeWarning: coroutine 'AsyncMultiModalItemTracker.all_mm_data' was never awaited
+[0;36m(APIServer pid=346393)[0;0m   return self.create_error_response(f"{e} {e.__cause__}")
+[0;36m(APIServer pid=346393)[0;0m RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259] Error in preprocessing prompt inputs
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259] Traceback (most recent call last):
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/serving_chat.py", line 237, in create_chat_completion
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]     ) = await self._preprocess_chat(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/serving_engine.py", line 1133, in _preprocess_chat
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]     request_prompt = apply_hf_chat_template(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/chat_utils.py", line 1751, in apply_hf_chat_template
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]     raise ValueError(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259] ValueError: As of transformers v4.44, default chat template is no longer allowed, so you must provide a chat template if the tokenizer does not define one.
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259] Error in preprocessing prompt inputs
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259] Traceback (most recent call last):
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/serving_chat.py", line 237, in create_chat_completion
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]     ) = await self._preprocess_chat(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/serving_engine.py", line 1133, in _preprocess_chat
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]     request_prompt = apply_hf_chat_template(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/chat_utils.py", line 1751, in apply_hf_chat_template
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259]     raise ValueError(
+[0;36m(APIServer pid=346393)[0;0m ERROR 12-22 13:04:33 [serving_chat.py:259] ValueError: As of transformers v4.44, default chat template is no longer allowed, so you must provide a chat template if the tokenizer does not define one.
+[0;36m(APIServer pid=346393)[0;0m INFO:     127.0.0.1:38314 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+[0;36m(APIServer pid=346393)[0;0m INFO:     127.0.0.1:38316 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+[0;36m(APIServer pid=346393)[0;0m INFO:     127.0.0.1:38330 - "POST /v1/chat/completions HTTP/1.1" 400 Bad Request
+[0;36m(APIServer pid=346393)[0;0m INFO 12-22 13:06:08 [launcher.py:110] Shutting down FastAPI HTTP server.
+[rank0]:[W1222 13:06:08.755962882 ProcessGroupNCCL.cpp:1524] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+[0;36m(APIServer pid=346393)[0;0m INFO:     Shutting down
+[0;36m(APIServer pid=346393)[0;0m INFO:     Waiting for application shutdown.
+[0;36m(APIServer pid=346393)[0;0m INFO:     Application shutdown complete.

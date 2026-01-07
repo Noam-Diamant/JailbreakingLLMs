@@ -46,14 +46,16 @@ def convert_bio_mcq_to_jailbreak_csv(json_path: str, output_csv_path: str):
             if answer_idx < len(choices[idx]):
                 correct_answer = choices[idx][answer_idx]
                 # Create target string that includes the answer
-                target = f"Sure, here is the answer: {correct_answer}"
+                #target = f"Sure, here is the answer: {correct_answer}"
+                target = f"{correct_answer}"
             else:
                 # Fallback if answer index is out of range
-                target = f"Sure, here is information about: {question}"
+                #target = f"Sure, here is information about: {question}"
+                target = f"{question}"
         else:
             # Fallback if no answer/choices available
-            target = f"Sure, here is information about: {question}"
-        
+            #target = f"Sure, here is information about: {question}"
+            target = f"{question}"
         # Use question as the goal
         goal = question
         

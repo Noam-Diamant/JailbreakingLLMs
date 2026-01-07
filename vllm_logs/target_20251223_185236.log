@@ -1,0 +1,92 @@
+[0;36m(APIServer pid=1495879)[0;0m INFO 12-23 18:52:52 [api_server.py:1772] vLLM API server version 0.12.0
+[0;36m(APIServer pid=1495879)[0;0m INFO 12-23 18:52:52 [utils.py:253] non-default args: {'model_tag': 'meta-llama/Llama-3.1-8B', 'port': 8004, 'api_key': ['EMPTY'], 'chat_template': '{{ bos_token }}{% for message in messages %}{% if message["role"] == "system" %}System: {{ message["content"] }}\n{% elif message["role"] == "user" %}User: {{ message["content"] }}\n{% elif message["role"] == "assistant" %}Assistant: {{ message["content"] }}\n{% endif %}{% endfor %}{% if add_generation_prompt %}Assistant:{% endif %}', 'model': 'meta-llama/Llama-3.1-8B', 'max_model_len': 8192, 'gpu_memory_utilization': 0.85}
+[0;36m(APIServer pid=1495879)[0;0m INFO 12-23 18:52:53 [model.py:637] Resolved architecture: LlamaForCausalLM
+[0;36m(APIServer pid=1495879)[0;0m INFO 12-23 18:52:53 [model.py:1750] Using max model len 8192
+[0;36m(APIServer pid=1495879)[0;0m INFO 12-23 18:52:54 [scheduler.py:228] Chunked prefill is enabled with max_num_batched_tokens=2048.
+[0;36m(APIServer pid=1495879)[0;0m Traceback (most recent call last):
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/bin/vllm", line 10, in <module>
+[0;36m(APIServer pid=1495879)[0;0m     sys.exit(main())
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/cli/main.py", line 73, in main
+[0;36m(APIServer pid=1495879)[0;0m     args.dispatch_function(args)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/cli/serve.py", line 60, in cmd
+[0;36m(APIServer pid=1495879)[0;0m     uvloop.run(run_server(args))
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/uvloop/__init__.py", line 69, in run
+[0;36m(APIServer pid=1495879)[0;0m     return loop.run_until_complete(wrapper())
+[0;36m(APIServer pid=1495879)[0;0m   File "uvloop/loop.pyx", line 1512, in uvloop.loop.Loop.run_until_complete
+[0;36m(APIServer pid=1495879)[0;0m   File "uvloop/loop.pyx", line 1505, in uvloop.loop.Loop.run_until_complete
+[0;36m(APIServer pid=1495879)[0;0m   File "uvloop/loop.pyx", line 1379, in uvloop.loop.Loop.run_forever
+[0;36m(APIServer pid=1495879)[0;0m   File "uvloop/loop.pyx", line 557, in uvloop.loop.Loop._run
+[0;36m(APIServer pid=1495879)[0;0m   File "uvloop/loop.pyx", line 476, in uvloop.loop.Loop._on_idle
+[0;36m(APIServer pid=1495879)[0;0m   File "uvloop/cbhandles.pyx", line 83, in uvloop.loop.Handle._run
+[0;36m(APIServer pid=1495879)[0;0m   File "uvloop/cbhandles.pyx", line 61, in uvloop.loop.Handle._run
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/uvloop/__init__.py", line 48, in wrapper
+[0;36m(APIServer pid=1495879)[0;0m     return await main
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 1819, in run_server
+[0;36m(APIServer pid=1495879)[0;0m     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 1838, in run_server_worker
+[0;36m(APIServer pid=1495879)[0;0m     async with build_async_engine_client(
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/contextlib.py", line 199, in __aenter__
+[0;36m(APIServer pid=1495879)[0;0m     return await anext(self.gen)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 183, in build_async_engine_client
+[0;36m(APIServer pid=1495879)[0;0m     async with build_async_engine_client_from_engine_args(
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/contextlib.py", line 199, in __aenter__
+[0;36m(APIServer pid=1495879)[0;0m     return await anext(self.gen)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 224, in build_async_engine_client_from_engine_args
+[0;36m(APIServer pid=1495879)[0;0m     async_llm = AsyncLLM.from_vllm_config(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/v1/engine/async_llm.py", line 223, in from_vllm_config
+[0;36m(APIServer pid=1495879)[0;0m     return cls(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/v1/engine/async_llm.py", line 114, in __init__
+[0;36m(APIServer pid=1495879)[0;0m     tokenizer = init_tokenizer_from_config(self.model_config)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/tokenizers/registry.py", line 227, in init_tokenizer_from_config
+[0;36m(APIServer pid=1495879)[0;0m     return get_tokenizer(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/tokenizers/registry.py", line 156, in get_tokenizer
+[0;36m(APIServer pid=1495879)[0;0m     files_list = list_filtered_repo_files(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/transformers_utils/repo_utils.py", line 121, in list_filtered_repo_files
+[0;36m(APIServer pid=1495879)[0;0m     all_files = list_repo_files(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/transformers_utils/repo_utils.py", line 110, in list_repo_files
+[0;36m(APIServer pid=1495879)[0;0m     return with_retry(lookup_files, "Error retrieving file list")
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/transformers_utils/repo_utils.py", line 60, in with_retry
+[0;36m(APIServer pid=1495879)[0;0m     return func()
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/transformers_utils/repo_utils.py", line 101, in lookup_files
+[0;36m(APIServer pid=1495879)[0;0m     return hf_list_repo_files(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+[0;36m(APIServer pid=1495879)[0;0m     return fn(*args, **kwargs)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 3054, in list_repo_files
+[0;36m(APIServer pid=1495879)[0;0m     return [
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 3054, in <listcomp>
+[0;36m(APIServer pid=1495879)[0;0m     return [
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/huggingface_hub/hf_api.py", line 3191, in list_repo_tree
+[0;36m(APIServer pid=1495879)[0;0m     for path_info in paginate(path=tree_url, headers=headers, params={"recursive": recursive, "expand": expand}):
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/huggingface_hub/utils/_pagination.py", line 36, in paginate
+[0;36m(APIServer pid=1495879)[0;0m     r = session.get(path, params=params, headers=headers)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/requests/sessions.py", line 602, in get
+[0;36m(APIServer pid=1495879)[0;0m     return self.request("GET", url, **kwargs)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/requests/sessions.py", line 589, in request
+[0;36m(APIServer pid=1495879)[0;0m     resp = self.send(prep, **send_kwargs)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/requests/sessions.py", line 703, in send
+[0;36m(APIServer pid=1495879)[0;0m     r = adapter.send(request, **kwargs)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/huggingface_hub/utils/_http.py", line 95, in send
+[0;36m(APIServer pid=1495879)[0;0m     return super().send(request, *args, **kwargs)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/requests/adapters.py", line 644, in send
+[0;36m(APIServer pid=1495879)[0;0m     resp = conn.urlopen(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+[0;36m(APIServer pid=1495879)[0;0m     response = self._make_request(
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/urllib3/connectionpool.py", line 534, in _make_request
+[0;36m(APIServer pid=1495879)[0;0m     response = conn.getresponse()
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/urllib3/connection.py", line 571, in getresponse
+[0;36m(APIServer pid=1495879)[0;0m     httplib_response = super().getresponse()
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/http/client.py", line 1375, in getresponse
+[0;36m(APIServer pid=1495879)[0;0m     response.begin()
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/http/client.py", line 318, in begin
+[0;36m(APIServer pid=1495879)[0;0m     version, status, reason = self._read_status()
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/http/client.py", line 279, in _read_status
+[0;36m(APIServer pid=1495879)[0;0m     line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/socket.py", line 717, in readinto
+[0;36m(APIServer pid=1495879)[0;0m     return self._sock.recv_into(b)
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/ssl.py", line 1307, in recv_into
+[0;36m(APIServer pid=1495879)[0;0m     return self.read(nbytes, buffer)
+[0;36m(APIServer pid=1495879)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/ssl.py", line 1163, in read
+[0;36m(APIServer pid=1495879)[0;0m     return self._sslobj.read(len, buffer)
+[0;36m(APIServer pid=1495879)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 1798, in signal_handler
+[0;36m(APIServer pid=1495879)[0;0m     raise KeyboardInterrupt("terminated")
+[0;36m(APIServer pid=1495879)[0;0m KeyboardInterrupt: terminated

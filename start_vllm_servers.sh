@@ -21,9 +21,9 @@ set -e  # Exit on error
 # GPU ASSIGNMENTS - Edit or override via environment variables if needed
 # ============================================================================
 # Format: Single GPU "0" or multiple GPUs "0,1,2,3" for tensor/pipeline parallelism
-TARGET_GPU=${TARGET_GPU:-3}       # GPU for target model  (matches --target-gpu default in main.py)
-ATTACKER_GPU=${ATTACKER_GPU:-0}   # GPU for attacker model (matches --attack-gpu default in main.py)
-JUDGE_GPU=${JUDGE_GPU:-0}         # GPU for judge model   (matches --judge-gpu default in main.py)
+TARGET_GPU=${TARGET_GPU:-2}       # GPU for target model  (matches --target-gpu default in main.py)
+ATTACKER_GPU=${ATTACKER_GPU:-1}   # GPU for attacker model (matches --attack-gpu default in main.py)
+JUDGE_GPU=${JUDGE_GPU:-1}         # GPU for judge model   (matches --judge-gpu default in main.py)
 
 # ============================================================================
 # MODEL CONFIGURATIONS - Edit or override via environment variables if needed
@@ -41,8 +41,11 @@ BASE_PORTS=(8004 8005 8006)
 # ============================================================================
 # VLLM PARAMETERS
 # ============================================================================
-# GPU memory utilization (0.0 to 1.0)
-GPU_MEMORY_UTILIZATION=${GPU_MEMORY_UTILIZATION:-0.85}
+# GPU memory utilization per model (0.0 to 1.0)
+# If judge and attacker share the same model, they will use the same GPU memory utilization
+TARGET_GPU_MEMORY_UTILIZATION=${TARGET_GPU_MEMORY_UTILIZATION:-0.45}
+ATTACKER_GPU_MEMORY_UTILIZATION=${ATTACKER_GPU_MEMORY_UTILIZATION:-0.85}
+JUDGE_GPU_MEMORY_UTILIZATION=${JUDGE_GPU_MEMORY_UTILIZATION:-0.85}
 
 # Max model length (reduce if OOM)
 MAX_MODEL_LEN=${MAX_MODEL_LEN:-8192}
@@ -115,12 +118,14 @@ ROLES=("target" "attacker" "judge")
 
 declare -A MODEL_TO_PORT
 declare -A MODEL_TO_GPU
+declare -A MODEL_TO_GPU_MEMORY_UTILIZATION
 
 next_port_index=0
 
 for i in "${!MODELS[@]}"; do
     model="${MODELS[$i]}"
     gpu="${GPUS[$i]}"
+    role="${ROLES[$i]}"
 
     if [[ -z "${MODEL_TO_PORT[$model]+x}" ]]; then
         if (( next_port_index >= ${#BASE_PORTS[@]} )); then
@@ -130,10 +135,22 @@ for i in "${!MODELS[@]}"; do
         port=${BASE_PORTS[$next_port_index]}
         MODEL_TO_PORT["$model"]=$port
         MODEL_TO_GPU["$model"]=$gpu
+        
+        # Set GPU memory utilization based on the first role that uses this model
+        if [[ "$role" == "target" ]]; then
+            MODEL_TO_GPU_MEMORY_UTILIZATION["$model"]=$TARGET_GPU_MEMORY_UTILIZATION
+        elif [[ "$role" == "attacker" ]]; then
+            MODEL_TO_GPU_MEMORY_UTILIZATION["$model"]=$ATTACKER_GPU_MEMORY_UTILIZATION
+        elif [[ "$role" == "judge" ]]; then
+            MODEL_TO_GPU_MEMORY_UTILIZATION["$model"]=$JUDGE_GPU_MEMORY_UTILIZATION
+        fi
+        
         next_port_index=$((next_port_index + 1))
     else
-        # Repeated model: reuse same port, keep the GPU of the first role.
+        # Repeated model: reuse same port, keep the GPU and GPU memory utilization of the first role.
         port=${MODEL_TO_PORT[$model]}
+        # If judge and attacker share the same model, they use the same GPU memory utilization
+        # (already set from the first role)
     fi
 done
 
@@ -147,14 +164,14 @@ JUDGE_PORT=${MODEL_TO_PORT[$JUDGE_MODEL]}
 print_header "Starting vLLM Servers for JailbreakingLLMs (PAIR)"
 
 echo "Configuration (role → model @ port on GPU):"
-echo "  Target:   $TARGET_MODEL @ $TARGET_PORT on GPU(s) $TARGET_GPU"
-echo "  Attacker: $ATTACKER_MODEL @ $ATTACKER_PORT on GPU(s) $ATTACKER_GPU"
-echo "  Judge:    $JUDGE_MODEL @ $JUDGE_PORT on GPU(s) $JUDGE_GPU"
+echo "  Target:   $TARGET_MODEL @ $TARGET_PORT on GPU(s) $TARGET_GPU (GPU mem util: $TARGET_GPU_MEMORY_UTILIZATION)"
+echo "  Attacker: $ATTACKER_MODEL @ $ATTACKER_PORT on GPU(s) $ATTACKER_GPU (GPU mem util: $ATTACKER_GPU_MEMORY_UTILIZATION)"
+echo "  Judge:    $JUDGE_MODEL @ $JUDGE_PORT on GPU(s) $JUDGE_GPU (GPU mem util: $JUDGE_GPU_MEMORY_UTILIZATION)"
 echo ""
 
 echo "Unique model assignments:"
 for model in "${!MODEL_TO_PORT[@]}"; do
-    echo "  $model -> port ${MODEL_TO_PORT[$model]}, GPU(s) ${MODEL_TO_GPU[$model]}"
+    echo "  $model -> port ${MODEL_TO_PORT[$model]}, GPU(s) ${MODEL_TO_GPU[$model]}, GPU mem util: ${MODEL_TO_GPU_MEMORY_UTILIZATION[$model]}"
 done
 echo ""
 
@@ -183,6 +200,7 @@ declare -A MODEL_TO_PID
 for model in "${!MODEL_TO_PORT[@]}"; do
     port=${MODEL_TO_PORT[$model]}
     gpu=${MODEL_TO_GPU[$model]}
+    gpu_memory_utilization=${MODEL_TO_GPU_MEMORY_UTILIZATION[$model]}
 
     # Decide extra args and log prefix by matching to role defaults
     extra_args=""
@@ -209,6 +227,7 @@ for model in "${!MODEL_TO_PORT[@]}"; do
     print_header "Starting vLLM server for model: $model"
     echo "  GPU(s): $gpu"
     echo "  Port:   $port"
+    echo "  GPU Memory Utilization: $gpu_memory_utilization"
     echo "  Extra:  $extra_args"
 
     # For Llama 3.1 models, append a simple chat template string directly via
@@ -217,7 +236,7 @@ for model in "${!MODEL_TO_PORT[@]}"; do
         CUDA_VISIBLE_DEVICES="$gpu" nohup vllm serve "$model" \
             --port "$port" \
             --api-key EMPTY \
-            --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
+            --gpu-memory-utilization "$gpu_memory_utilization" \
             --max-model-len "$MAX_MODEL_LEN" \
             $extra_args \
             --chat-template "$(cat "$LLAMA_TEMPLATE_FILE")" \
@@ -226,7 +245,7 @@ for model in "${!MODEL_TO_PORT[@]}"; do
         CUDA_VISIBLE_DEVICES="$gpu" nohup vllm serve "$model" \
             --port "$port" \
             --api-key EMPTY \
-            --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
+            --gpu-memory-utilization "$gpu_memory_utilization" \
             --max-model-len "$MAX_MODEL_LEN" \
             $extra_args \
             > "vllm_logs/${log_prefix}_${TIMESTAMP}.log" 2>&1 &

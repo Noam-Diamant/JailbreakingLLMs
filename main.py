@@ -32,14 +32,14 @@ def get_wandb_project_name(args):
     
     # If no PEFT adapters are used, return 'original_model_<target_model>'
     if not any([attack_peft, target_peft, judge_peft]):
-        return f"original_model_{target_model}"
+        return f"original_model_{target_model}_heavy_balanced"
     
     # If PEFT adapters are used, create a project name based on the adapter paths
     # Priority: target > attack > judge (since target is usually the main model being tested)
     if target_peft:
         # Extract adapter name from path (use last directory name or filename)
         adapter_name = os.path.basename(target_peft.rstrip('/'))
-        return f"peft_{adapter_name}_{target_model}"
+        return f"peft_{adapter_name}_{target_model}_medium_balanced"
     elif attack_peft:
         adapter_name = os.path.basename(attack_peft.rstrip('/'))
         return f"peft_{adapter_name}_{attack_model}"
@@ -300,7 +300,19 @@ if __name__ == '__main__':
         "--judge-model",
         default="gcg", #TODO changed
         help="Name of judge model. Defaults to the Llama Guard model from JailbreakBench.",
-        choices=["gpt-3.5-turbo-1106", "gpt-4-0125-preview","no-judge","jailbreakbench","gcg","qwen2-57b-a14b-instruct-gptq-int4"]
+        choices=["gpt-3.5-turbo-1106", "gpt-4-0125-preview","no-judge","jailbreakbench","gcg","qwen2-57b-a14b-instruct-gptq-int4","dspy"]
+    )
+    parser.add_argument(
+        "--judge-dspy-path",
+        type=str,
+        default=None,
+        help="Path to compiled DSPy judge (required when --judge-model=dspy)"
+    )
+    parser.add_argument(
+        "--judge-dspy-model",
+        type=str,
+        default="qwen2-57b-a14b-instruct-gptq-int4",
+        help="Model name to use for DSPy judge (when --judge-model=dspy)"
     )
     parser.add_argument(
         "--judge-max-n-tokens",
@@ -394,7 +406,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target-gpu-memory-utilization",
         type = float,
-        default = 0.85,
+        default = 0.45,
         help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     
@@ -402,7 +414,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--attack-gpu",
         type = str,
-        default = "0",
+        default = "2",
         help = "GPU device(s) for attack model. Can be single GPU '0' or multiple '0,1'. If not specified, uses GPU 0."
     )
     parser.add_argument(
@@ -414,7 +426,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--judge-gpu",
         type = str,
-        default = "0",
+        default = "2",
         help = "GPU device(s) for judge model. Can be single GPU '0' or multiple '0,1'. Only used with --evaluate-judge-locally."
     )
     ##################################################
@@ -557,12 +569,16 @@ if __name__ == '__main__':
                 f"attack_model={args.attack_model}, "
                 f"judge_model={args.judge_model}"
             )
-            # Explicitly set api_base to None for all models to force local loading
-            if getattr(args, "target_api_base", None) is None:
+            # Explicitly set api_base to None for models with PEFT adapters to force local loading
+            # PEFT adapters require local loading, cannot use HTTP servers
+            if getattr(args, 'target_peft_adapter', None):
+                logger.info(f"Target model has PEFT adapter - forcing local loading (ignoring --target-api-base)")
                 args.target_api_base = None
-            if getattr(args, "attack_api_base", None) is None:
+            if getattr(args, 'attack_peft_adapter', None):
+                logger.info(f"Attack model has PEFT adapter - forcing local loading (ignoring --attack-api-base)")
                 args.attack_api_base = None
-            if getattr(args, "judge_api_base", None) is None:
+            if getattr(args, 'judge_peft_adapter', None):
+                logger.info(f"Judge model has PEFT adapter - forcing local loading (ignoring --judge-api-base)")
                 args.judge_api_base = None
         else:
             # No PEFT adapters - use HTTP vLLM servers as before
@@ -586,7 +602,12 @@ if __name__ == '__main__':
 
             target_port = assign_port_for_model(args.target_model)
             attack_port = assign_port_for_model(args.attack_model)
-            judge_port = assign_port_for_model(args.judge_model)
+            
+            # For DSPy judge, use the actual model name (judge_dspy_model) instead of "dspy"
+            judge_model_name = args.judge_model
+            if args.judge_model == "dspy":
+                judge_model_name = getattr(args, 'judge_dspy_model', args.attack_model)
+            judge_port = assign_port_for_model(judge_model_name)
 
             if getattr(args, "target_api_base", None) is None:
                 args.target_api_base = f"http://localhost:{target_port}/v1"

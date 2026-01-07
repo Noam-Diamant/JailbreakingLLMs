@@ -1,0 +1,58 @@
+[0;36m(APIServer pid=1495878)[0;0m INFO 12-23 18:52:52 [api_server.py:1772] vLLM API server version 0.12.0
+[0;36m(APIServer pid=1495878)[0;0m INFO 12-23 18:52:52 [utils.py:253] non-default args: {'model_tag': 'Qwen/Qwen2-57B-A14B-Instruct-GPTQ-Int4', 'port': 8005, 'api_key': ['EMPTY'], 'model': 'Qwen/Qwen2-57B-A14B-Instruct-GPTQ-Int4', 'max_model_len': 8192, 'quantization': 'gptq', 'gpu_memory_utilization': 0.85}
+[0;36m(APIServer pid=1495878)[0;0m INFO 12-23 18:52:53 [model.py:637] Resolved architecture: Qwen2MoeForCausalLM
+[0;36m(APIServer pid=1495878)[0;0m INFO 12-23 18:52:53 [model.py:1750] Using max model len 8192
+[0;36m(APIServer pid=1495878)[0;0m INFO 12-23 18:52:54 [gptq_marlin.py:234] Detected that the model can run with gptq_marlin, however you specified quantization=gptq explicitly, so forcing gptq. Use quantization=gptq_marlin for faster inference
+[0;36m(APIServer pid=1495878)[0;0m Traceback (most recent call last):
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/bin/vllm", line 10, in <module>
+[0;36m(APIServer pid=1495878)[0;0m     sys.exit(main())
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/cli/main.py", line 73, in main
+[0;36m(APIServer pid=1495878)[0;0m     args.dispatch_function(args)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/cli/serve.py", line 60, in cmd
+[0;36m(APIServer pid=1495878)[0;0m     uvloop.run(run_server(args))
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/uvloop/__init__.py", line 69, in run
+[0;36m(APIServer pid=1495878)[0;0m     return loop.run_until_complete(wrapper())
+[0;36m(APIServer pid=1495878)[0;0m   File "uvloop/loop.pyx", line 1512, in uvloop.loop.Loop.run_until_complete
+[0;36m(APIServer pid=1495878)[0;0m   File "uvloop/loop.pyx", line 1505, in uvloop.loop.Loop.run_until_complete
+[0;36m(APIServer pid=1495878)[0;0m   File "uvloop/loop.pyx", line 1379, in uvloop.loop.Loop.run_forever
+[0;36m(APIServer pid=1495878)[0;0m   File "uvloop/loop.pyx", line 557, in uvloop.loop.Loop._run
+[0;36m(APIServer pid=1495878)[0;0m   File "uvloop/loop.pyx", line 476, in uvloop.loop.Loop._on_idle
+[0;36m(APIServer pid=1495878)[0;0m   File "uvloop/cbhandles.pyx", line 83, in uvloop.loop.Handle._run
+[0;36m(APIServer pid=1495878)[0;0m   File "uvloop/cbhandles.pyx", line 61, in uvloop.loop.Handle._run
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/uvloop/__init__.py", line 48, in wrapper
+[0;36m(APIServer pid=1495878)[0;0m     return await main
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 1819, in run_server
+[0;36m(APIServer pid=1495878)[0;0m     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 1838, in run_server_worker
+[0;36m(APIServer pid=1495878)[0;0m     async with build_async_engine_client(
+[0;36m(APIServer pid=1495878)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/contextlib.py", line 199, in __aenter__
+[0;36m(APIServer pid=1495878)[0;0m     return await anext(self.gen)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 183, in build_async_engine_client
+[0;36m(APIServer pid=1495878)[0;0m     async with build_async_engine_client_from_engine_args(
+[0;36m(APIServer pid=1495878)[0;0m   File "/home/dsi/diamann2/.local/share/uv/python/cpython-3.10.19-linux-x86_64-gnu/lib/python3.10/contextlib.py", line 199, in __aenter__
+[0;36m(APIServer pid=1495878)[0;0m     return await anext(self.gen)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 209, in build_async_engine_client_from_engine_args
+[0;36m(APIServer pid=1495878)[0;0m     vllm_config = engine_args.create_engine_config(usage_context=usage_context)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 1365, in create_engine_config
+[0;36m(APIServer pid=1495878)[0;0m     model_config = self.create_model_config()
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/engine/arg_utils.py", line 1221, in create_model_config
+[0;36m(APIServer pid=1495878)[0;0m     return ModelConfig(
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/pydantic/_internal/_dataclasses.py", line 121, in __init__
+[0;36m(APIServer pid=1495878)[0;0m     s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/config/model.py", line 714, in __post_init__
+[0;36m(APIServer pid=1495878)[0;0m     self._verify_quantization()
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/config/model.py", line 1020, in _verify_quantization
+[0;36m(APIServer pid=1495878)[0;0m     quantization_override = method.override_quantization_method(
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/gptq_bitblas.py", line 184, in override_quantization_method
+[0;36m(APIServer pid=1495878)[0;0m     can_convert = cls.is_gptq_bitblas_compatible(hf_quant_cfg)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/gptq_bitblas.py", line 242, in is_gptq_bitblas_compatible
+[0;36m(APIServer pid=1495878)[0;0m     major, minor = torch.cuda.get_device_capability()
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/torch/cuda/__init__.py", line 598, in get_device_capability
+[0;36m(APIServer pid=1495878)[0;0m     prop = get_device_properties(device)
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/torch/cuda/__init__.py", line 614, in get_device_properties
+[0;36m(APIServer pid=1495878)[0;0m     _lazy_init()  # will define _get_device_properties
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/torch/cuda/__init__.py", line 410, in _lazy_init
+[0;36m(APIServer pid=1495878)[0;0m     torch._C._cuda_init()
+[0;36m(APIServer pid=1495878)[0;0m   File "/private/fetaya-lab/noam_diamant/projects/Unlearning_with_SAE/JailbreakingLLMs/.venv/lib/python3.10/site-packages/vllm/entrypoints/openai/api_server.py", line 1798, in signal_handler
+[0;36m(APIServer pid=1495878)[0;0m     raise KeyboardInterrupt("terminated")
+[0;36m(APIServer pid=1495878)[0;0m KeyboardInterrupt: terminated
