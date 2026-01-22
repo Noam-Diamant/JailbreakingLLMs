@@ -77,6 +77,9 @@ class WandBLogger:
         df["judge_scores"] = judge_scores
         df["iter"] = iteration
         df["conv_num"] = [i+1 for i in range(len(response_list))]
+        # Add original Q&A to each row
+        df["original_question"] = self.goal
+        df["original_answer"] = self.target_str
         self.table = pd.concat([self.table, df])
 
         if any([score == self.success_score for score in judge_scores]):

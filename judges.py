@@ -63,9 +63,11 @@ class JudgeBase:
         self.goal = args.goal
         self.target_str = args.target_str
         
+        # Track if using bio prompts
+        self.use_bio_prompts = getattr(args, 'use_bio_prompts', False)
+        
         # Conditionally use bio prompts if specified
-        use_bio_prompts = getattr(args, 'use_bio_prompts', False)
-        if use_bio_prompts:
+        if self.use_bio_prompts:
             from system_prompts_bio import get_judge_system_prompt
         else:
             from system_prompts import get_judge_system_prompt
@@ -73,7 +75,12 @@ class JudgeBase:
         self.system_prompt = get_judge_system_prompt(args.goal, args.target_str)
 
     def get_judge_prompt(self, attack_prompt, target_response):
-        return f"[PROMPT]:{attack_prompt}\n[ASSISTANT'S RESPONSE]: {target_response}"
+        if self.use_bio_prompts:
+            # For bio: just pass the proposed response since Q&A are in system prompt
+            return f"Proposed Response: {target_response}"
+        else:
+            # For regular: pass both prompt and response
+            return f"[PROMPT]:{attack_prompt}\n[ASSISTANT'S RESPONSE]: {target_response}"
 
     def score(self, prompt_list, response_list):
         raise NotImplementedError
