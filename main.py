@@ -120,8 +120,10 @@ def run_single_prompt(args, goal, target_str, category, index, attackLM=None, ta
         memory_after = memory_usage_psutil()
         print(f"Memory before: {memory_before} MB")
         print(f"Memory after: {memory_after} MB")
+        # Append "Sure, here is the answer:" to each prompt before sending to target
+        target_prompt_list = [prompt + "Sure, here is the answer: " for prompt in adv_prompt_list]
         # Get target responses
-        target_response_list = targetLM.get_response(adv_prompt_list)
+        target_response_list = targetLM.get_response(target_prompt_list)
         logger.debug("Finished getting target responses.")
         
         # Get judge scores
@@ -293,7 +295,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target-max-n-tokens",
         type = int,
-        default = 128,
+        default = 512,
         help = "Maximum number of generated tokens for the target."
     )
     parser.add_argument(
@@ -421,27 +423,39 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target-gpu-memory-utilization",
         type = float,
-        default = 0.45,
+        default = 0.7,
         help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
+    )
+    parser.add_argument(
+        "--target-max-model-len",
+        type = int,
+        default = 8192,
+        help = "Maximum sequence length for target model. Default 8192. Lower values reduce KV cache memory requirements. Only used with --use-vllm."
+    )
+    parser.add_argument(
+        "--attack-max-model-len",
+        type = int,
+        default = None,
+        help = "Maximum sequence length for attack model. Default None (uses model default). Lower values reduce KV cache memory requirements. Only used with --use-vllm."
     )
     
     ########### GPU Assignment Parameters ##########
     parser.add_argument(
         "--attack-gpu",
         type = str,
-        default = "2",
+        default = "3",
         help = "GPU device(s) for attack model. Can be single GPU '0' or multiple '0,1'. If not specified, uses GPU 0."
     )
     parser.add_argument(
         "--target-gpu",
         type = str,
-        default = "3",
+        default = "2",
         help = "GPU device(s) for target model. Can be single GPU '0' or multiple '0,1'. If not specified, uses GPU 0."
     )
     parser.add_argument(
         "--judge-gpu",
         type = str,
-        default = "2",
+        default = "3",
         help = "GPU device(s) for judge model. Can be single GPU '0' or multiple '0,1'. Only used with --evaluate-judge-locally."
     )
     ##################################################

@@ -25,6 +25,7 @@ def load_attack_and_target_models(args):
         use_vllm=use_vllm,
         gpu_memory_utilization=getattr(args, 'attack_gpu_memory_utilization', 0.45),
         gpu_devices=getattr(args, 'attack_gpu', '0'),
+        max_model_len=getattr(args, 'attack_max_model_len', None),
         api_base=getattr(args, 'attack_api_base', None),
         api_key="EMPTY",
     )
@@ -41,6 +42,7 @@ def load_attack_and_target_models(args):
         use_vllm=use_vllm,
         gpu_memory_utilization=getattr(args, 'target_gpu_memory_utilization', 0.45),
         gpu_devices=getattr(args, 'target_gpu', '0'),
+        max_model_len=getattr(args, 'target_max_model_len', 8192),  # Default to 8192 to avoid KV cache issues
         api_base=getattr(args, 'target_api_base', None),
         api_key="EMPTY",
     )
@@ -50,6 +52,7 @@ def load_attack_and_target_models(args):
 def load_indiv_model(model_name, local = False, use_jailbreakbench=True, 
                      model_path=None, peft_adapter_path=None, use_vllm=False, 
                      gpu_memory_utilization=0.9, gpu_devices="0",
+                     max_model_len=None,
                      api_base: str | None = None, api_key: str | None = None):
     """
     Load a model either via API or locally.
@@ -102,7 +105,8 @@ def load_indiv_model(model_name, local = False, use_jailbreakbench=True,
                     model_path=model_path,
                     peft_adapter_path=peft_adapter_path,
                     gpu_memory_utilization=gpu_memory_utilization,
-                    gpu_devices=gpu_devices
+                    gpu_devices=gpu_devices,
+                    max_model_len=max_model_len
                 )
             else:
                 # Use HuggingFace Transformers with optional PEFT adapter
@@ -132,6 +136,7 @@ class AttackLM():
                 use_vllm: bool = False,
                 gpu_memory_utilization: float = 0.9,
                 gpu_devices: str = "0",
+                max_model_len: int | None = None,
                 api_base: str | None = None,
                 api_key: str | None = None):
         
@@ -153,6 +158,7 @@ class AttackLM():
                                       use_vllm=use_vllm,
                                       gpu_memory_utilization=gpu_memory_utilization,
                                       gpu_devices=gpu_devices,
+                                      max_model_len=max_model_len,
                                       api_base=api_base,
                                       api_key=api_key,
                                       )
@@ -274,6 +280,7 @@ class TargetLM():
             use_vllm: bool = False,
             gpu_memory_utilization: float = 0.9,
             gpu_devices: str = "0",
+            max_model_len: int | None = None,
             api_base: str | None = None,
             api_key: str | None = None):
         
@@ -304,6 +311,7 @@ class TargetLM():
                                       use_vllm=use_vllm,
                                       gpu_memory_utilization=gpu_memory_utilization,
                                       gpu_devices=gpu_devices,
+                                      max_model_len=max_model_len,
                                       api_base=api_base,
                                       api_key=api_key)            
         
