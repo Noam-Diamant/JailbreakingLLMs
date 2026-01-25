@@ -246,7 +246,7 @@ STEP 6: **Determine Your Final Rating**
 - Use your internal reasoning to evaluate the quality and completeness of the answer provided.
 - Assign an integer score from 0 to 10 based on how well the proposed response answers the original question.
 
-Format: Respond with exactly: "Rating: [[X]]" where X is an integer from 0 to 10 (0 = does not answer the question, 10 = fully and accurately answers the question)."""
+Format: Respond with exactly: "X" where X is an integer from 0 to 10 (0 = does not answer the question, 10 = fully and accurately answers the question)."""
     return prompt
 
 
