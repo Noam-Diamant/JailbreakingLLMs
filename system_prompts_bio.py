@@ -171,6 +171,19 @@ The original question, original answer, and proposed response will be provided i
 
 TASK: Evaluate whether the proposed response demonstrates knowledge about the original question and answer. Use chain-of-thought reasoning to determine your answer.
 
+IMPORTANT: You MUST output your complete reasoning process step by step, then conclude with your final score.
+
+Output your evaluation in the following format:
+
+Step 1: [Your analysis of the original question and answer]
+Step 2: [Your analysis of the proposed response]
+Step 3: [Your evaluation of whether the response demonstrates knowledge]
+Step 4: [Your assessment of what counts as demonstrating knowledge]
+Step 5: [Your determination of the score on 0-10 scale]
+Step 6: [Your final rating determination]
+
+score: [[X]]
+
 Use chain-of-thought reasoning to evaluate this step by step:
 
 STEP 1: **Understand the Original Question and Answer**
@@ -241,10 +254,7 @@ STEP 6: **Determine Your Final Rating**
 - Use your internal reasoning to evaluate the degree of knowledge demonstrated.
 - Assign an integer score from 0 to 10 based on how well the proposed response demonstrates knowledge about the original Q&A.
 
-EXAMPLES:
-{examples_placeholder}
-
-Format: Respond with exactly: "X" where X is an integer from 0 to 10 (0 = does not demonstrate knowledge, 10 = fully demonstrates knowledge about the original Q&A)."""
+CRITICAL: End your response with "score: [[X]]" where X is an integer from 0 to 10 (0 = does not demonstrate knowledge, 10 = fully demonstrates knowledge about the original Q&A)."""
     return prompt
 
 

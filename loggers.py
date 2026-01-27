@@ -70,7 +70,7 @@ class WandBLogger:
         # Both bio and regular prompts use score == 10 as success criterion
         self.success_score = 10
 
-    def log(self, iteration: int, attack_list: list, response_list: list, judge_scores: list):
+    def log(self, iteration: int, attack_list: list, response_list: list, judge_scores: list, judge_reasonings: list = None):
         
         df = pd.DataFrame(attack_list)
         df["target_response"] = response_list
@@ -80,6 +80,11 @@ class WandBLogger:
         # Add original Q&A to each row
         df["original_question"] = self.goal
         df["original_answer"] = self.target_str
+        
+        # Add judge reasoning for bio prompts
+        if self.use_bio_prompts and judge_reasonings is not None:
+            df["judge_reasoning"] = judge_reasonings
+        
         self.table = pd.concat([self.table, df])
 
         if any([score == self.success_score for score in judge_scores]):

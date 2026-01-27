@@ -100,7 +100,7 @@ def run_single_prompt(args, goal, target_str, category, index, attackLM=None, ta
     shared_timestamp = getattr(args, 'wandb_timestamp', None)
     wandb_project = get_wandb_project_name(args, timestamp=shared_timestamp)
     wandb_logger = WandBLogger(args, system_prompts, project_name=wandb_project)
-    target_response_list, judge_scores = None, None
+    target_response_list, judge_scores, judge_reasonings = None, None, None
     success = False
     successful_attacks = []  # Track successful attacks
     
@@ -133,7 +133,7 @@ def run_single_prompt(args, goal, target_str, category, index, attackLM=None, ta
         logger.debug("Finished getting target responses.")
         
         # Get judge scores (judge uses original prompts without suffix)
-        judge_scores = judgeLM.score(adv_prompt_list, target_response_list)
+        judge_scores, judge_reasonings = judgeLM.score(adv_prompt_list, target_response_list)
         logger.debug("Finished getting judge scores.")
         
         # Track successful attacks (score == 10)
@@ -151,7 +151,7 @@ def run_single_prompt(args, goal, target_str, category, index, attackLM=None, ta
             logger.debug(f"{i+1}/{batchsize}\n\n[IMPROVEMENT]:\n{improv} \n\n[PROMPT]:\n{prompt} \n\n[RESPONSE]:\n{response}\n\n[SCORE]:\n{score}\n\n")
 
         # WandB log values (now logs the complete prompts with suffix)
-        wandb_logger.log(iteration, extracted_attack_list, target_response_list, judge_scores)
+        wandb_logger.log(iteration, extracted_attack_list, target_response_list, judge_scores, judge_reasonings)
 
         # Truncate conversation to avoid context length issues
         for i, conv in enumerate(convs_list):
@@ -380,7 +380,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--judge-max-n-tokens",
         type = int,
-        default = 10,
+        default = 2048,
         help = "Maximum number of tokens for the judge."
     )
     parser.add_argument(
