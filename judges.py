@@ -45,8 +45,8 @@ def load_judge(args, attackLM=None):
 
     if args.judge_model.startswith("gpt-"):
         return GPTJudge(args)
-    elif args.judge_model == "qwen2-57b-a14b-instruct-gptq-int4":
-        # Support local execution for Qwen judge
+    elif args.judge_model in ["qwen2-57b-a14b-instruct-gptq-int4", "llama-guard-3-8b"]:
+        # Support local execution for Qwen and Llama Guard judges
         evaluate_locally = getattr(args, 'evaluate_judge_locally', False)
         if evaluate_locally:
             return LocalJudge(args)
@@ -136,10 +136,21 @@ class GPTJudge(JudgeBase):
         self.judge_model = APILiteLLM(model_name = self.judge_name)
 
     def create_conv(self, full_prompt):
-        conv = get_conversation_template(self.judge_name)
-        conv.set_system_message(self.system_prompt)
-        conv.append_message(conv.roles[0], full_prompt)
-        return conv.to_openai_api_messages()
+        # Check if using Llama Guard (case-insensitive)
+        is_llama_guard = "llama-guard" in self.judge_name.lower()
+        
+        if is_llama_guard:
+            # For Llama Guard: merge system prompt into user message
+            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            return [
+                {"role": "user", "content": combined_prompt}
+            ]
+        else:
+            # For other models: use standard conversation template
+            conv = get_conversation_template(self.judge_name)
+            conv.set_system_message(self.system_prompt)
+            conv.append_message(conv.roles[0], full_prompt)
+            return conv.to_openai_api_messages()
 
     def score(self, attack_prompt_list, target_response_list):
         convs_list = [self.create_conv(self.get_judge_prompt(prompt, response)) for prompt, response in zip(attack_prompt_list, target_response_list)]
@@ -260,11 +271,26 @@ class LocalJudge(JudgeBase):
         logger.info(f"Loaded local judge model: {self.judge_name}")
     
     def create_conv(self, full_prompt):
-        """Create conversation in OpenAI API format for vLLM."""
-        return [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": full_prompt}
-        ]
+        """Create conversation in OpenAI API format for vLLM.
+        
+        For Llama Guard models, merge system prompt into user message
+        since Llama Guard requires strict user/assistant alternation.
+        """
+        # Check if using Llama Guard (case-insensitive)
+        is_llama_guard = "llama-guard" in self.judge_name.lower()
+        
+        if is_llama_guard:
+            # For Llama Guard: merge system prompt and user prompt into single user message
+            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            return [
+                {"role": "user", "content": combined_prompt}
+            ]
+        else:
+            # For other models: use standard system + user format
+            return [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": full_prompt}
+            ]
     
     def score(self, attack_prompt_list, target_response_list):
         convs_list = [self.create_conv(self.get_judge_prompt(prompt, response))
@@ -291,11 +317,26 @@ class SharedModelJudge(JudgeBase):
         logger.info(f"Reusing attack model '{args.attack_model}' for judge scoring")
 
     def create_conv(self, full_prompt):
-        """Create conversation in OpenAI API format."""
-        return [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": full_prompt}
-        ]
+        """Create conversation in OpenAI API format.
+        
+        For Llama Guard models, merge system prompt into user message
+        since Llama Guard requires strict user/assistant alternation.
+        """
+        # Check if using Llama Guard (case-insensitive)
+        is_llama_guard = "llama-guard" in self.judge_name.lower()
+        
+        if is_llama_guard:
+            # For Llama Guard: merge system prompt and user prompt into single user message
+            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            return [
+                {"role": "user", "content": combined_prompt}
+            ]
+        else:
+            # For other models: use standard system + user format
+            return [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": full_prompt}
+            ]
 
     def score(self, attack_prompt_list, target_response_list):
         convs_list = [self.create_conv(self.get_judge_prompt(prompt, response))
@@ -327,11 +368,27 @@ class HTTPJudge(JudgeBase):
         logger.info(f"Using HTTP judge at {api_base} with model {self.judge_name}")
 
     def create_conv(self, full_prompt):
-        """Create conversation in OpenAI API format for HTTP server."""
-        return [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": full_prompt}
-        ]
+        """Create conversation in OpenAI API format for HTTP server.
+        
+        For Llama Guard models, merge system prompt into user message
+        since Llama Guard requires strict user/assistant alternation.
+        """
+        # Check if using Llama Guard (case-insensitive)
+        is_llama_guard = "llama-guard" in self.judge_name.lower()
+        
+        if is_llama_guard:
+            # For Llama Guard: merge system prompt and user prompt into single user message
+            # This avoids the "roles must alternate" error
+            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            return [
+                {"role": "user", "content": combined_prompt}
+            ]
+        else:
+            # For other models: use standard system + user format
+            return [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": full_prompt}
+            ]
 
     def score(self, attack_prompt_list, target_response_list):
         convs_list = [self.create_conv(self.get_judge_prompt(prompt, response))

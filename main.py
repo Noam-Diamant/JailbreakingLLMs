@@ -363,7 +363,7 @@ if __name__ == '__main__':
         "--judge-model",
         default="gcg", #TODO changed
         help="Name of judge model. Defaults to the Llama Guard model from JailbreakBench.",
-        choices=["gpt-3.5-turbo-1106", "gpt-4-0125-preview","no-judge","jailbreakbench","gcg","qwen2-57b-a14b-instruct-gptq-int4","dspy"]
+        choices=["gpt-3.5-turbo-1106", "gpt-4-0125-preview","no-judge","jailbreakbench","gcg","qwen2-57b-a14b-instruct-gptq-int4","dspy","llama-guard-3-8b"]
     )
     parser.add_argument(
         "--judge-dspy-path",
@@ -469,7 +469,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target-gpu-memory-utilization",
         type = float,
-        default = 0.7,
+        default = 0.85,
         help = "GPU memory utilization for target model (0.0 to 1.0). Default 0.45 to allow both models to fit. Only used with --use-vllm."
     )
     parser.add_argument(

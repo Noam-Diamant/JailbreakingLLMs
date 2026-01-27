@@ -5,6 +5,7 @@ LLAMA_3_8B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-ll
 LLAMA_3_1_8B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Llama-3.1-8B/snapshots/d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
 GEMMA_2_2B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--google--gemma-2-2b"
 QWEN_57B_GPTQ_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--Qwen--Qwen2-57B-A14B-Instruct-GPTQ-Int4"
+LLAMA_GUARD_3_8B_PATH = "/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Llama-Guard-3-8B"
 
 ATTACK_TEMP = 1
 TARGET_TEMP = 0
@@ -26,6 +27,7 @@ class Model(Enum):
     mixtral = "mixtral"
     gemma_2_2b = "gemma-2-2b"
     qwen_57b_gptq = "qwen2-57b-a14b-instruct-gptq-int4"
+    llama_guard_3_8b = "llama-guard-3-8b"
 
 MODEL_NAMES = [model.value for model in Model]
 
@@ -37,7 +39,8 @@ HF_MODEL_NAMES: dict[Model, str] = {
     Model.vicuna: "lmsys/vicuna-13b-v1.5",
     Model.mixtral: "mistralai/Mixtral-8x7B-Instruct-v0.1",
     Model.gemma_2_2b: "google/gemma-2-2b",
-    Model.qwen_57b_gptq: "Qwen/Qwen2-57B-A14B-Instruct-GPTQ-Int4"
+    Model.qwen_57b_gptq: "Qwen/Qwen2-57B-A14B-Instruct-GPTQ-Int4",
+    Model.llama_guard_3_8b: LLAMA_GUARD_3_8B_PATH
 }
 
 TOGETHER_MODEL_NAMES: dict[Model, str] = {
@@ -61,6 +64,7 @@ FASTCHAT_TEMPLATE_NAMES: dict[Model, str] = {
     Model.mixtral: "mixtral",
     Model.gemma_2_2b: "gemma",
     Model.qwen_57b_gptq: "qwen-7b-chat",
+    Model.llama_guard_3_8b: "llama-3",
 }
 
 API_KEY_NAMES: dict[Model, str] = {
@@ -171,5 +175,14 @@ LITELLM_TEMPLATES: dict[Model, dict] = {
                 "post_message": "",
                 "initial_prompt_value": "",
                 "eos_tokens": ["<|im_end|>", "<|endoftext|>"]
+    },
+    Model.llama_guard_3_8b: {"roles":{
+                    "system": {"pre_message": "<|start_header_id|>system<|end_header_id|>\n\n", "post_message": "<|eot_id|>"},
+                    "user": {"pre_message": "<|start_header_id|>user<|end_header_id|>\n\n", "post_message": "<|eot_id|>"},
+                    "assistant": {"pre_message": "<|start_header_id|>assistant<|end_header_id|>\n\n", "post_message": "<|eot_id|>"},
+                },
+                "post_message" : "",
+                "initial_prompt_value" : "<|begin_of_text|>",
+                "eos_tokens" :  ["<|eot_id|>"]
     }
 }
