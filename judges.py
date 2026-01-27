@@ -59,8 +59,9 @@ class JudgeBase:
     def __init__(self, args):
         self.temperature = args.judge_temperature
         self.judge_name = args.judge_model
-        self.goal = args.goal
-        self.target_str = args.target_str
+        # Don't store goal/target_str as instance variables - they change per prompt!
+        # self.goal = args.goal
+        # self.target_str = args.target_str
         
         # Track if using bio prompts
         self.use_bio_prompts = getattr(args, 'use_bio_prompts', False)
@@ -70,16 +71,19 @@ class JudgeBase:
             # Need more tokens for step-by-step reasoning
             self.max_n_tokens = max(args.judge_max_n_tokens, 1000)
             from system_prompts_bio import get_judge_system_prompt
+            self.get_judge_system_prompt_fn = get_judge_system_prompt
         else:
             self.max_n_tokens = args.judge_max_n_tokens
             from system_prompts import get_judge_system_prompt
+            self.get_judge_system_prompt_fn = get_judge_system_prompt
         
-        self.system_prompt = get_judge_system_prompt(args.goal, args.target_str)
+        # Store function to generate system prompt dynamically
+        # self.system_prompt = get_judge_system_prompt(args.goal, args.target_str)
 
-    def get_judge_prompt(self, attack_prompt, target_response):
+    def get_judge_prompt(self, attack_prompt, target_response, goal, target_str):
         if self.use_bio_prompts:
             # For bio: include Original Q&A and proposed response in full_prompt
-            return f"Original Question: {self.goal}\nOriginal Answer: {self.target_str}\n\nProposed Response: {target_response}"
+            return f"Original Question: {goal}\nOriginal Answer: {target_str}\n\nProposed Response: {target_response}"
         else:
             # For regular: pass both prompt and response
             return f"[PROMPT]:{attack_prompt}\n[ASSISTANT'S RESPONSE]: {target_response}"
@@ -157,26 +161,36 @@ class GPTJudge(JudgeBase):
     def __init__(self, args):
         super(GPTJudge, self).__init__(args)
         self.judge_model = APILiteLLM(model_name = self.judge_name)
+        # Store args to access goal/target_str dynamically
+        self.args = args
 
-    def create_conv(self, full_prompt):
+    def create_conv(self, full_prompt, goal, target_str):
+        # Generate system prompt dynamically with current goal/target_str
+        system_prompt = self.get_judge_system_prompt_fn(goal, target_str)
+        
         # Check if using Llama Guard (case-insensitive)
         is_llama_guard = "llama-guard" in self.judge_name.lower()
         
         if is_llama_guard:
             # For Llama Guard: merge system prompt into user message
-            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            combined_prompt = f"{system_prompt}\n\n{full_prompt}"
             return [
                 {"role": "user", "content": combined_prompt}
             ]
         else:
             # For other models: use standard conversation template
             conv = get_conversation_template(self.judge_name)
-            conv.set_system_message(self.system_prompt)
+            conv.set_system_message(system_prompt)
             conv.append_message(conv.roles[0], full_prompt)
             return conv.to_openai_api_messages()
 
     def score(self, attack_prompt_list, target_response_list):
-        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response)) for prompt, response in zip(attack_prompt_list, target_response_list)]
+        # Get current goal and target_str from args
+        goal = self.args.goal
+        target_str = self.args.target_str
+        
+        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response, goal, target_str), goal, target_str) 
+                      for prompt, response in zip(attack_prompt_list, target_response_list)]
         raw_outputs = self.judge_model.batched_generate(convs_list,
                                                         max_n_tokens = self.max_n_tokens,
                                                         temperature = self.temperature,
@@ -300,32 +314,42 @@ class LocalJudge(JudgeBase):
             gpu_devices=getattr(args, 'judge_gpu', '0')
         )
         
+        # Store args to access goal/target_str dynamically
+        self.args = args
+        
         logger.info(f"Loaded local judge model: {self.judge_name}")
     
-    def create_conv(self, full_prompt):
+    def create_conv(self, full_prompt, goal, target_str):
         """Create conversation in OpenAI API format for vLLM.
         
         For Llama Guard models, merge system prompt into user message
         since Llama Guard requires strict user/assistant alternation.
         """
+        # Generate system prompt dynamically with current goal/target_str
+        system_prompt = self.get_judge_system_prompt_fn(goal, target_str)
+        
         # Check if using Llama Guard (case-insensitive)
         is_llama_guard = "llama-guard" in self.judge_name.lower()
         
         if is_llama_guard:
             # For Llama Guard: merge system prompt and user prompt into single user message
-            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            combined_prompt = f"{system_prompt}\n\n{full_prompt}"
             return [
                 {"role": "user", "content": combined_prompt}
             ]
         else:
             # For other models: use standard system + user format
             return [
-                {"role": "system", "content": self.system_prompt},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": full_prompt}
             ]
     
     def score(self, attack_prompt_list, target_response_list):
-        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response))
+        # Get current goal and target_str from args
+        goal = self.args.goal
+        target_str = self.args.target_str
+        
+        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response, goal, target_str), goal, target_str)
                       for prompt, response in zip(attack_prompt_list, target_response_list)]
         raw_outputs = self.judge_model.batched_generate(convs_list,
                                                         max_n_tokens=self.max_n_tokens,
@@ -353,32 +377,41 @@ class SharedModelJudge(JudgeBase):
 
         # Reuse the attack model's underlying model instance
         self.judge_model = attackLM.model
+        # Store args to access goal/target_str dynamically
+        self.args = args
         logger.info(f"Reusing attack model '{args.attack_model}' for judge scoring")
 
-    def create_conv(self, full_prompt):
+    def create_conv(self, full_prompt, goal, target_str):
         """Create conversation in OpenAI API format.
         
         For Llama Guard models, merge system prompt into user message
         since Llama Guard requires strict user/assistant alternation.
         """
+        # Generate system prompt dynamically with current goal/target_str
+        system_prompt = self.get_judge_system_prompt_fn(goal, target_str)
+        
         # Check if using Llama Guard (case-insensitive)
         is_llama_guard = "llama-guard" in self.judge_name.lower()
         
         if is_llama_guard:
             # For Llama Guard: merge system prompt and user prompt into single user message
-            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            combined_prompt = f"{system_prompt}\n\n{full_prompt}"
             return [
                 {"role": "user", "content": combined_prompt}
             ]
         else:
             # For other models: use standard system + user format
             return [
-                {"role": "system", "content": self.system_prompt},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": full_prompt}
             ]
 
     def score(self, attack_prompt_list, target_response_list):
-        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response))
+        # Get current goal and target_str from args
+        goal = self.args.goal
+        target_str = self.args.target_str
+        
+        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response, goal, target_str), goal, target_str)
                       for prompt, response in zip(attack_prompt_list, target_response_list)]
         raw_outputs = self.judge_model.batched_generate(convs_list,
                                                         max_n_tokens=self.max_n_tokens,
@@ -410,34 +443,44 @@ class HTTPJudge(JudgeBase):
             api_base=api_base,
             api_key="EMPTY",
         )
+        
+        # Store args to access goal/target_str dynamically
+        self.args = args
 
         logger.info(f"Using HTTP judge at {api_base} with model {self.judge_name}")
 
-    def create_conv(self, full_prompt):
+    def create_conv(self, full_prompt, goal, target_str):
         """Create conversation in OpenAI API format for HTTP server.
         
         For Llama Guard models, merge system prompt into user message
         since Llama Guard requires strict user/assistant alternation.
         """
+        # Generate system prompt dynamically with current goal/target_str
+        system_prompt = self.get_judge_system_prompt_fn(goal, target_str)
+        
         # Check if using Llama Guard (case-insensitive)
         is_llama_guard = "llama-guard" in self.judge_name.lower()
         
         if is_llama_guard:
             # For Llama Guard: merge system prompt and user prompt into single user message
             # This avoids the "roles must alternate" error
-            combined_prompt = f"{self.system_prompt}\n\n{full_prompt}"
+            combined_prompt = f"{system_prompt}\n\n{full_prompt}"
             return [
                 {"role": "user", "content": combined_prompt}
             ]
         else:
             # For other models: use standard system + user format
             return [
-                {"role": "system", "content": self.system_prompt},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": full_prompt}
             ]
 
     def score(self, attack_prompt_list, target_response_list):
-        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response))
+        # Get current goal and target_str from args
+        goal = self.args.goal
+        target_str = self.args.target_str
+        
+        convs_list = [self.create_conv(self.get_judge_prompt(prompt, response, goal, target_str), goal, target_str)
                       for prompt, response in zip(attack_prompt_list, target_response_list)]
         raw_outputs = self.judge_model.batched_generate(
             convs_list,
@@ -469,6 +512,9 @@ class DSPyJudge(JudgeBase):
             raise ImportError(
                 "DSPy not installed. Install with: pip install dspy-ai"
             )
+        
+        # Store args to access goal/target_str dynamically
+        self.args = args
         
         # Load compiled judge if path is provided
         judge_path = getattr(args, 'judge_dspy_path', None)
@@ -576,13 +622,17 @@ class DSPyJudge(JudgeBase):
         scores = []
         reasonings = []
         
+        # Get current goal and target_str from args (dynamically updated per prompt)
+        goal = self.args.goal
+        target_str = self.args.target_str
+        
         for attack_prompt, target_response in zip(attack_prompt_list, target_response_list):
             # Use DSPy judge to predict
             prediction = self.dspy_judge(
                 attack_prompt=attack_prompt,
                 target_response=target_response,
-                original_question=self.goal,
-                original_answer=self.target_str
+                original_question=goal,
+                original_answer=target_str
             )
             
             # Extract score (0-10 scale for bio prompts, 0-10 for regular prompts)
