@@ -321,6 +321,133 @@ class TargetLM():
             
         self.category = category
 
+    # ------------------------------------------------------------------
+    # MCQ logit evaluation (no chat template, no generation)
+    # ------------------------------------------------------------------
+
+    def get_mcq_abcd_logits(self, raw_prompts: list) -> list:
+        """
+        Given raw prompt strings (adversarial prefix + MCQ block, no chat
+        template wrapping), return A/B/C/D logit or log-probability values at
+        the last token position for each prompt.
+
+        Returns a list of dicts {'A': float, 'B': float, 'C': float, 'D': float}.
+
+        - LocalTransformers: returns raw logits from model(**inputs).logits[:, -1, choice_idxs].
+        - LocalvLLM: appends each letter to the prompt and reads P(letter|context)
+          via prompt_logprobs=1 — no top-k approximation needed.
+        - HTTPChatModel: not supported (raises NotImplementedError).
+        """
+        if isinstance(self.model, LocalvLLM):
+            return self._mcq_logits_vllm(raw_prompts)
+        elif isinstance(self.model, LocalTransformers):
+            return self._mcq_logits_hf(raw_prompts)
+        else:
+            raise NotImplementedError(
+                "MCQ logit scoring requires a local model (--evaluate-locally). "
+                "HTTP-based target models (--target-api-base) are not supported "
+                "for the 'mcq-logits' judge."
+            )
+
+    def _mcq_logits_hf(self, raw_prompts: list) -> list:
+        """Forward pass via HuggingFace transformers; returns raw logits."""
+        import torch
+
+        m = self.model  # LocalTransformers instance
+        tok = m.tokenizer
+
+        A_id = tok.encode("A", add_special_tokens=False)[-1]
+        B_id = tok.encode("B", add_special_tokens=False)[-1]
+        C_id = tok.encode("C", add_special_tokens=False)[-1]
+        D_id = tok.encode("D", add_special_tokens=False)[-1]
+        choice_idxs = torch.tensor([A_id, B_id, C_id, D_id])
+
+        orig_padding_side = tok.padding_side
+        tok.padding_side = "left"
+        if tok.pad_token is None:
+            tok.pad_token = tok.eos_token
+
+        device = next(m.model.parameters()).device
+        inputs = tok(
+            raw_prompts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+        ).to(device)
+
+        with torch.no_grad():
+            logits_all = m.model(**inputs).logits  # (batch, seq, vocab)
+
+        tok.padding_side = orig_padding_side
+
+        # Last token of each (unpadded) sequence
+        choice_logits = logits_all[:, -1, choice_idxs]  # (batch, 4)
+        results = []
+        for row in choice_logits:
+            results.append({
+                "A": row[0].item(),
+                "B": row[1].item(),
+                "C": row[2].item(),
+                "D": row[3].item(),
+            })
+        return results
+
+    def _mcq_logits_vllm(self, raw_prompts: list) -> list:
+        """
+        Forward pass via vLLM; returns log-probabilities for A/B/C/D.
+
+        For each base prompt (ending with "Answer:\\n"), four variants are
+        built by appending each letter ("A", "B", "C", "D").  vLLM's
+        prompt_logprobs=1 is used to read P(letter | context) directly from
+        the last prompt-token position, without relying on top-k sampling.
+
+        This mirrors the HF path: we score exactly the four candidate tokens.
+        """
+        import vllm
+
+        m = self.model  # LocalvLLM instance
+        tok = m.tokenizer
+
+        letters = ["A", "B", "C", "D"]
+        letter_ids = [tok.encode(l, add_special_tokens=False)[-1] for l in letters]
+
+        # Build 4×n_streams prompts, one per (base_prompt, letter) pair
+        extended_prompts = [p + letter for p in raw_prompts for letter in letters]
+
+        # prompt_logprobs=1 returns the conditional log-probability of every
+        # input token given its left context; we only read the last position.
+        sampling_params = vllm.SamplingParams(
+            max_tokens=1,
+            prompt_logprobs=1,
+            temperature=0.0,
+        )
+
+        if m.peft_adapter_path:
+            lora_req = vllm.lora.request.LoRARequest(
+                lora_name="adapter",
+                lora_int_id=1,
+                lora_local_path=m.peft_adapter_path,
+            )
+            outputs = m.model.generate(extended_prompts, sampling_params, lora_request=lora_req)
+        else:
+            outputs = m.model.generate(extended_prompts, sampling_params)
+
+        results = []
+        for base_idx in range(len(raw_prompts)):
+            row = {}
+            for letter_offset, letter in enumerate(letters):
+                out = outputs[base_idx * 4 + letter_offset]
+                # prompt_logprobs is a list of dicts (one per input token).
+                # The last entry holds P(letter | context), keyed by token id.
+                last_pos = out.prompt_logprobs[-1]  # {token_id: Logprob, ...}
+                tid = letter_ids[letter_offset]
+                if last_pos and tid in last_pos:
+                    row[letter] = last_pos[tid].logprob
+                else:
+                    row[letter] = -100.0
+            results.append(row)
+        return results
+
     def get_response(self, prompts_list):
         if self.use_jailbreakbench:
             llm_response = self.model.query(prompts = prompts_list, 
