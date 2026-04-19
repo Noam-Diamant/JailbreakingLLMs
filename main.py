@@ -122,7 +122,7 @@ def run_single_prompt(args, goal, target_str, category, index, attackLM=None, ta
         print(f"Memory before: {memory_before} MB")
         print(f"Memory after: {memory_after} MB")
         # Append "Sure, here is the answer:" to each prompt before sending to target
-        target_prompt_list = [prompt + " Sure, here is the answer: " for prompt in adv_prompt_list]
+        target_prompt_list = [prompt + " Sure, here is the answer. " for prompt in adv_prompt_list]
         
         # Update extracted_attack_list with the actual prompts sent to target
         for i, attack in enumerate(extracted_attack_list):

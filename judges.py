@@ -101,49 +101,114 @@ class JudgeBase:
         # For bio prompts, extract reasoning and score separately
         reasoning = None
         if self.use_bio_prompts:
-            # Try to extract reasoning (everything before "score: [[X]]")
+            # Try multiple patterns to extract reasoning (everything before score)
+            # Pattern 1: "score: [[X]]"
             score_pattern = r'score:\s*\[\[(\d+)\]\]'
             match = re.search(score_pattern, raw_output, re.IGNORECASE)
             if match:
                 score = int(match.group(1))
-                # Extract reasoning (everything before the score line)
                 reasoning = raw_output[:match.start()].strip()
                 return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 2: "score: [X]"
+            score_pattern = r'score:\s*\[(\d+)\]'
+            match = re.search(score_pattern, raw_output, re.IGNORECASE)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 3: "score: X"
+            score_pattern = r'score:\s*(\d+)'
+            match = re.search(score_pattern, raw_output, re.IGNORECASE)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 4: "Rating: [[X]]"
+            score_pattern = r'rating:\s*\[\[(\d+)\]\]'
+            match = re.search(score_pattern, raw_output, re.IGNORECASE)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 5: "Rating: [X]"
+            score_pattern = r'rating:\s*\[(\d+)\]'
+            match = re.search(score_pattern, raw_output, re.IGNORECASE)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 6: "Rating: X"
+            score_pattern = r'rating:\s*(\d+)'
+            match = re.search(score_pattern, raw_output, re.IGNORECASE)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 7: Just double brackets [[X]] anywhere
+            score_pattern = r'\[\[(\d+)\]\]'
+            match = re.search(score_pattern, raw_output)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 8: Just single brackets [X] anywhere
+            score_pattern = r'\[(\d+)\]'
+            match = re.search(score_pattern, raw_output)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # Pattern 9: Just a number (fallback) - everything before the number is reasoning
+            score_pattern = r'\b(10|[0-9])\b'
+            match = re.search(score_pattern, raw_output)
+            if match:
+                score = int(match.group(1))
+                reasoning = raw_output[:match.start()].strip()
+                return (min(max(score, 0), 10), reasoning)
+            
+            # If no pattern matches in bio mode, log warning and return 0 with full output as reasoning
+            logger.warning(f"Error in processing judge output (bio mode): {raw_output}")
+            return (0, raw_output.strip())
         
+        # Non-bio patterns (original behavior)
         pattern1 = r'\[\[(\d+)\]\]'
         match = re.search(pattern1, raw_output)
         if match:
             score = int(match.group(1))
-            result = min(max(score, 0), 10)  # Clamp to 0-10 range
-            return (result, reasoning) if self.use_bio_prompts else result
+            return min(max(score, 0), 10)  # Clamp to 0-10 range
         
-        # Pattern 2: Single brackets [X] (what judge is actually outputting)
+        # Pattern 2: Single brackets [X]
         pattern2 = r'\[(\d+)\]'
         match = re.search(pattern2, raw_output)
         if match:
             score = int(match.group(1))
-            result = min(max(score, 0), 10)  # Clamp to 0-10 range
-            return (result, reasoning) if self.use_bio_prompts else result
+            return min(max(score, 0), 10)  # Clamp to 0-10 range
         
         # Pattern 3: "Rating: X" format
         pattern3 = r'Rating:\s*(\d+)'
         match = re.search(pattern3, raw_output, re.IGNORECASE)
         if match:
             score = int(match.group(1))
-            result = min(max(score, 0), 10)  # Clamp to 0-10 range
-            return (result, reasoning) if self.use_bio_prompts else result
+            return min(max(score, 0), 10)  # Clamp to 0-10 range
         
         # Pattern 4: Just a number (fallback) - now supports 0-10 scale
         pattern4 = r'\b(10|[0-9])\b'
         match = re.search(pattern4, raw_output)
         if match:
             score = int(match.group(1))
-            result = min(max(score, 0), 10)  # Clamp to 0-10 range
-            return (result, reasoning) if self.use_bio_prompts else result
+            return min(max(score, 0), 10)  # Clamp to 0-10 range
         
         # If no pattern matches, log warning and default to 0 (no knowledge shown)
         logger.warning(f"Error in processing judge output: {raw_output}")
-        return (0, reasoning) if self.use_bio_prompts else 0
+        return 0
                
 class NoJudge(JudgeBase):
     def __init__(self, args):

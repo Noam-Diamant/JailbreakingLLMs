@@ -22,7 +22,7 @@ set -e  # Exit on error
 # ============================================================================
 # Format: Single GPU "0" or multiple GPUs "0,1,2,3" for tensor/pipeline parallelism
 TARGET_GPU=${TARGET_GPU:-2}       # GPU for target model  (matches --target-gpu default in main.py)
-ATTACKER_GPU=${ATTACKER_GPU:-1}   # GPU for attacker model (matches --attack-gpu default in main.py)
+ATTACKER_GPU=${ATTACKER_GPU:-3}   # GPU for attacker model (matches --attack-gpu default in main.py)
 JUDGE_GPU=${JUDGE_GPU:-1}         # GPU for judge model   (matches --judge-gpu default in main.py)
 
 # ============================================================================
@@ -32,6 +32,7 @@ JUDGE_GPU=${JUDGE_GPU:-1}         # GPU for judge model   (matches --judge-gpu d
 TARGET_MODEL=${TARGET_MODEL:-"meta-llama/Llama-3.1-8B"}
 ATTACKER_MODEL=${ATTACKER_MODEL:-"Qwen/Qwen2-57B-A14B-Instruct-GPTQ-Int4"}
 JUDGE_MODEL=${JUDGE_MODEL:-"Qwen/Qwen2-57B-A14B-Instruct-GPTQ-Int4"}
+#JUDGE_MODEL=${JUDGE_MODEL:-"/dsi/fetaya-lab/noam_diamant/hugging_face/hub/models--meta-llama--Llama-Guard-3-8B"}
 
 # ============================================================================
 # PORT CONFIGURATIONS - Fixed to 8004/8005/8006 as requested
@@ -43,7 +44,7 @@ BASE_PORTS=(8004 8005 8006)
 # ============================================================================
 # GPU memory utilization per model (0.0 to 1.0)
 # If judge and attacker share the same model, they will use the same GPU memory utilization
-TARGET_GPU_MEMORY_UTILIZATION=${TARGET_GPU_MEMORY_UTILIZATION:-0.45}
+TARGET_GPU_MEMORY_UTILIZATION=${TARGET_GPU_MEMORY_UTILIZATION:-0.7}
 ATTACKER_GPU_MEMORY_UTILIZATION=${ATTACKER_GPU_MEMORY_UTILIZATION:-0.85}
 JUDGE_GPU_MEMORY_UTILIZATION=${JUDGE_GPU_MEMORY_UTILIZATION:-0.85}
 
